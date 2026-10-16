@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Renovation, Step } from '../types'
 import {
+  collectGeneralSteps,
   isStepOutsideWindow,
   layoutLane,
   overflowDays,
@@ -66,6 +67,36 @@ describe('isStepOutsideWindow', () => {
   it('is true when a step starts before the window start', () => {
     const step = makeStep({ id: 'a', startDate: '2026-10-18', durationDays: 1 })
     expect(isStepOutsideWindow(step, renovation)).toBe(true)
+  })
+})
+
+describe('collectGeneralSteps', () => {
+  it('collapses linked copies into a single representative', () => {
+    const a = makeStep({ id: 'a', groupId: 'g1', roomId: 'room-1', title: 'Rodapés' })
+    const b = makeStep({ id: 'b', groupId: 'g1', roomId: 'room-2', title: 'Rodapés' })
+    const c = makeStep({ id: 'c', groupId: 'g1', roomId: 'room-3', title: 'Rodapés' })
+    expect(collectGeneralSteps([a, b, c]).map((step) => step.id)).toEqual(['a'])
+  })
+
+  it('includes steps without a room and keeps one entry per group', () => {
+    const plain = makeStep({ id: 'plain', roomId: 'room-1' })
+    const loose = makeStep({ id: 'loose', roomId: null })
+    const a = makeStep({ id: 'a', groupId: 'g1', roomId: 'room-1' })
+    const b = makeStep({ id: 'b', groupId: 'g1', roomId: 'room-2' })
+    expect(collectGeneralSteps([plain, loose, a, b]).map((step) => step.id)).toEqual(['loose', 'a'])
+  })
+
+  it('prefers a representative from a visible room when some copies are hidden', () => {
+    const hidden = makeStep({ id: 'hidden', groupId: 'g1', roomId: 'room-1' })
+    const visible = makeStep({ id: 'visible', groupId: 'g1', roomId: 'room-2' })
+    const result = collectGeneralSteps([hidden, visible], new Set(['room-1']))
+    expect(result.map((step) => step.id)).toEqual(['visible'])
+  })
+
+  it('falls back to the first copy when every room is hidden', () => {
+    const a = makeStep({ id: 'a', groupId: 'g1', roomId: 'room-1' })
+    const b = makeStep({ id: 'b', groupId: 'g1', roomId: 'room-2' })
+    expect(collectGeneralSteps([a, b], new Set(['room-1', 'room-2'])).map((step) => step.id)).toEqual(['a'])
   })
 })
 

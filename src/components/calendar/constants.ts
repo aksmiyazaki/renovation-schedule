@@ -6,6 +6,8 @@ export const BAR_HEIGHT = 30
 export const BAR_GAP = 6
 export const LANE_PADDING = 6
 export const UNASSIGNED_LANE_ID = '__unassigned'
+export const GENERAL_LANE_ID = '__general'
+export const GENERAL_LANE_COLOR = '#4f46e5'
 
 /** Deterministic accent color per room, used for structural highlights only. */
 export const roomAccent = (index: number): string => PALETTE[index % PALETTE.length]
@@ -17,6 +19,8 @@ export interface Lane {
   subtitle: string
   dotColor: string
   steps: Step[]
+  /** The "Reforma geral" lane (tasks that apply to every room). */
+  general?: boolean
 }
 
 export const ZOOM_ORDER: ZoomLevel[] = ['compact', 'normal', 'wide']

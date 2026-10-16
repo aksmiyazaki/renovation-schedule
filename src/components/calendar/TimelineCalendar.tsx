@@ -11,6 +11,7 @@ import {
   fromISODate,
   isStepOutsideWindow,
   layoutLane,
+  collectGeneralSteps,
   overflowDays,
   renovationEndISO,
   requiredDurationDays,
@@ -24,6 +25,8 @@ import {
   BAR_GAP,
   BAR_HEIGHT,
   DAY_WIDTHS,
+  GENERAL_LANE_COLOR,
+  GENERAL_LANE_ID,
   LANE_PADDING,
   ROW_HEADER_WIDTH,
   roomAccent,
@@ -43,7 +46,16 @@ function buildLanes(renovation: Renovation, group: CalendarGroup): Lane[] {
   const isVisibleStep = (step: Step) => !(step.roomId && hiddenRoomIds.has(step.roomId))
 
   if (group === 'rooms') {
-    return renovation.rooms
+    const generalSteps = collectGeneralSteps(renovation.steps, hiddenRoomIds)
+    const generalLane: Lane = {
+      id: GENERAL_LANE_ID,
+      name: 'Reforma geral',
+      subtitle: plural(generalSteps.length, 'etapa', 'etapas'),
+      dotColor: GENERAL_LANE_COLOR,
+      steps: generalSteps,
+      general: true,
+    }
+    const roomLanes: Lane[] = renovation.rooms
       .map((room, index) => ({ room, index }))
       .filter(({ room }) => !room.hidden)
       .map(({ room, index }) => {
@@ -56,6 +68,7 @@ function buildLanes(renovation: Renovation, group: CalendarGroup): Lane[] {
           steps,
         }
       })
+    return [generalLane, ...roomLanes]
   }
 
   const professionalLanes: Lane[] = renovation.professionals.map((professional) => ({
@@ -191,7 +204,7 @@ interface ResourceRowProps {
   onOpenStep: (step: Step) => void
   onCreateStep: (
     startISO: string,
-    defaults: { professionalId: string | null; roomId: string | null },
+    defaults: { professionalId: string | null; roomId: string | null; allRooms?: boolean },
   ) => void
   onMove: (stepId: string, startISO: string) => void
   onResize: (stepId: string, durationDays: number) => void
@@ -225,6 +238,14 @@ function ResourceRow({
       totalDays - 1,
       Math.max(0, Math.floor((event.clientX - rect.left) / dayWidth)),
     )
+    if (lane.id === GENERAL_LANE_ID) {
+      onCreateStep(toISODate(addDays(start, index)), {
+        professionalId: null,
+        roomId: null,
+        allRooms: true,
+      })
+      return
+    }
     const isUnassignedLane = lane.id === UNASSIGNED_LANE_ID
     onCreateStep(toISODate(addDays(start, index)), {
       professionalId: group === 'team' && !isUnassignedLane ? lane.id : null,
@@ -289,12 +310,18 @@ export function TimelineCalendar() {
   const printing = useStore((state) => state.printing)
   const setDurationDays = useStore((state) => state.setDurationDays)
   const updateStep = useStore((state) => state.updateStep)
+  const updateStepGroup = useStore((state) => state.updateStepGroup)
   const notify = useStore((state) => state.notify)
 
   const [hover, setHover] = useState<{ stepId: string; x: number; y: number } | null>(null)
   const [editing, setEditing] = useState<{
     step: Step | null
-    defaults?: { startDate?: string; professionalId?: string | null; roomId?: string | null }
+    defaults?: {
+      startDate?: string
+      professionalId?: string | null
+      roomId?: string | null
+      allRooms?: boolean
+    }
   } | null>(null)
 
   const timelineRef = useRef<HTMLDivElement>(null)
@@ -379,19 +406,29 @@ export function TimelineCalendar() {
     setDurationDays(required)
     notify('info', 'Prazo da reforma estendido.')
   }
-
   const moveStep = (stepId: string, startISO: string) => {
     const step = renovation.steps.find((candidate) => candidate.id === stepId)
     if (!step || step.startDate === startISO) return
-    updateStep(stepId, { startDate: startISO })
-    notify('info', `“${step.title}” movida para ${fmtDay(startISO)}.`)
+    if (step.groupId) {
+      updateStepGroup(step.groupId, { startDate: startISO })
+      notify('info', `“${step.title}” movida para ${fmtDay(startISO)} (todos os cômodos).`)
+    } else {
+      updateStep(stepId, { startDate: startISO })
+      notify('info', `“${step.title}” movida para ${fmtDay(startISO)}.`)
+    }
   }
 
   const resizeStep = (stepId: string, durationDays: number) => {
     const step = renovation.steps.find((candidate) => candidate.id === stepId)
     if (!step || step.durationDays === durationDays) return
-    updateStep(stepId, { durationDays })
-    notify('info', `“${step.title}” agora dura ${durationDays === 1 ? '1 dia' : `${durationDays} dias`}.`)
+    const label = durationDays === 1 ? '1 dia' : `${durationDays} dias`
+    if (step.groupId) {
+      updateStepGroup(step.groupId, { durationDays })
+      notify('info', `“${step.title}” agora dura ${label} em todos os cômodos.`)
+    } else {
+      updateStep(stepId, { durationDays })
+      notify('info', `“${step.title}” agora dura ${label}.`)
+    }
   }
 
   const hoveredStep = hover
@@ -404,6 +441,9 @@ export function TimelineCalendar() {
     : null
   const hoveredRoom = hoveredStep
     ? renovation.rooms.find((room) => room.id === hoveredStep.roomId) ?? null
+    : null
+  const hoveredAllRoomsCount = hoveredStep?.groupId
+    ? renovation.steps.filter((step) => step.groupId === hoveredStep.groupId).length
     : null
 
   const zoomIndex = ZOOM_ORDER.indexOf(zoom)
@@ -477,13 +517,7 @@ export function TimelineCalendar() {
       ) : null}
 
       <div className="calendar-panel relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        {lanes.length === 0 ? (
-          <div className="flex flex-1 items-center justify-center p-8 text-center text-sm text-slate-400 dark:text-slate-500">
-            {renovation.rooms.length === 0
-              ? 'Nenhum cômodo cadastrado. Adicione cômodos na aba “Cômodos” do painel lateral.'
-              : 'Todos os cômodos estão ocultos. Mostre um cômodo na aba “Cômodos” do painel lateral.'}
-          </div>
-        ) : calendarView === 'months' ? (
+        {calendarView === 'months' ? (
           <MonthsCalendar
             lanes={lanes}
             group={calendarGroup}
@@ -587,6 +621,7 @@ export function TimelineCalendar() {
               step={hoveredStep}
               professional={hoveredProfessional}
               room={hoveredRoom}
+              allRoomsCount={hoveredAllRoomsCount}
               anchor={{ x: hover?.x ?? 0, y: hover?.y ?? 0 }}
               outside={outsideIds.has(hoveredStep.id)}
             />

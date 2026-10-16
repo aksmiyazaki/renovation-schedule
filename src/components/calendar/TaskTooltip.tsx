@@ -12,6 +12,7 @@ interface TaskTooltipProps {
   step: Step
   professional: Professional | null
   room: Room | null
+  allRoomsCount: number | null
   anchor: { x: number; y: number }
   outside: boolean
 }
@@ -20,6 +21,7 @@ export function TaskTooltip({
   step,
   professional,
   room,
+  allRoomsCount,
   anchor,
   outside,
 }: TaskTooltipProps) {
@@ -74,7 +76,7 @@ export function TaskTooltip({
 
       <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
         <DoorOpen size={12} className="shrink-0" />
-        {room ? room.name : 'Sem cômodo'}
+        {allRoomsCount !== null ? `Todos os cômodos (${allRoomsCount})` : room ? room.name : 'Sem cômodo'}
       </p>
 
       <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">

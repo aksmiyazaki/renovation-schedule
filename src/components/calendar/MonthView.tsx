@@ -13,13 +13,13 @@ import {
   startOfMonth,
   startOfWeek,
 } from 'date-fns'
-import { Check, DoorOpen } from 'lucide-react'
+import { Check, DoorOpen, Home } from 'lucide-react'
 import { cx } from '../../lib/cx'
 import { durationLabel, fmtDay, fmtMonthYear, plural } from '../../lib/format'
 import { contrastText } from '../../lib/palette'
 import { fromISODate, stepEndISO, toISODate } from '../../lib/scheduling'
 import type { CalendarGroup, Step } from '../../types'
-import { UNASSIGNED_LANE_ID } from './constants'
+import { GENERAL_LANE_ID, UNASSIGNED_LANE_ID } from './constants'
 import type { Lane } from './constants'
 import { useBarDrag } from './useBarDrag'
 
@@ -243,7 +243,7 @@ interface WeekRowProps {
   onOpenStep: (step: Step) => void
   onCreateStep: (
     startISO: string,
-    defaults: { professionalId: string | null; roomId: string | null },
+    defaults: { professionalId: string | null; roomId: string | null; allRooms?: boolean },
   ) => void
   onMove: (stepId: string, startISO: string) => void
   onResize: (stepId: string, durationDays: number) => void
@@ -275,6 +275,10 @@ function WeekRow({
   const rowWidth = 7 * CELL_W
 
   const handleCellClick = (iso: string) => {
+    if (laneId === GENERAL_LANE_ID) {
+      onCreateStep(iso, { professionalId: null, roomId: null, allRooms: true })
+      return
+    }
     const isUnassignedLane = laneId === UNASSIGNED_LANE_ID
     onCreateStep(iso, {
       professionalId: group === 'team' && !isUnassignedLane ? laneId : null,
@@ -385,7 +389,7 @@ interface MonthsCalendarProps {
   onOpenStep: (step: Step) => void
   onCreateStep: (
     startISO: string,
-    defaults: { professionalId: string | null; roomId: string | null },
+    defaults: { professionalId: string | null; roomId: string | null; allRooms?: boolean },
   ) => void
   onMove: (stepId: string, startISO: string) => void
   onResize: (stepId: string, durationDays: number) => void
@@ -433,7 +437,11 @@ export function MonthsCalendar({
           >
             <div className="flex flex-wrap items-center gap-2 border-b border-[var(--cal-line)] bg-slate-50/80 px-3 py-2 dark:bg-slate-800/40">
               {group === 'rooms' ? (
-                <DoorOpen size={15} className="shrink-0" style={{ color: lane.dotColor }} />
+                lane.general ? (
+                  <Home size={15} className="shrink-0" style={{ color: lane.dotColor }} />
+                ) : (
+                  <DoorOpen size={15} className="shrink-0" style={{ color: lane.dotColor }} />
+                )
               ) : (
                 <span
                   className="size-3 shrink-0 rounded-full"

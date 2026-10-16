@@ -31,6 +31,37 @@ export function isStepOutsideWindow(step: Step, renovation: Renovation): boolean
   return step.startDate < renovation.startDate || stepEndISO(step) > renovationEndISO(renovation)
 }
 
+/**
+ * Steps shown in the "Reforma geral" lane: one representative per linked group
+ * (preferring a copy from a visible room) plus any steps without a room.
+ */
+export function collectGeneralSteps(steps: Step[], hiddenRoomIds: Set<string> = new Set()): Step[] {
+  const groupOrder: string[] = []
+  const groups = new Map<string, Step[]>()
+  const singles: Step[] = []
+
+  for (const step of steps) {
+    if (step.groupId) {
+      const copies = groups.get(step.groupId)
+      if (copies) {
+        copies.push(step)
+      } else {
+        groups.set(step.groupId, [step])
+        groupOrder.push(step.groupId)
+      }
+    } else if (!step.roomId) {
+      singles.push(step)
+    }
+  }
+
+  const representatives = groupOrder.map((groupId) => {
+    const copies = groups.get(groupId) ?? []
+    return copies.find((copy) => !copy.roomId || !hiddenRoomIds.has(copy.roomId)) ?? copies[0]
+  })
+
+  return [...singles, ...representatives]
+}
+
 /** First free day after the latest scheduled step (or the renovation start when empty). */
 export function suggestNextStart(steps: Step[], renovationStart: string): string {
   if (steps.length === 0) return renovationStart

@@ -70,8 +70,11 @@ interface StoreState {
   toggleRoomHidden: (id: string) => void
 
   addStep: (data: Omit<Step, 'id'>) => void
+  addStepCopies: (data: Omit<Step, 'id' | 'roomId' | 'groupId'>, roomIds: string[]) => void
   updateStep: (id: string, patch: Partial<Omit<Step, 'id'>>) => void
+  updateStepGroup: (groupId: string, patch: Partial<Omit<Step, 'id' | 'groupId'>>) => void
   removeStep: (id: string) => void
+  removeStepGroup: (groupId: string) => void
   setStepStatus: (id: string, status: StepStatus) => void
 
   replaceRenovation: (renovation: Renovation) => void
@@ -264,6 +267,28 @@ export const useStore = create<StoreState>()(
           },
         })),
 
+      addStepCopies: (data, roomIds) =>
+        set((state) => {
+          const groupId = uid()
+          const copies: Step[] =
+            roomIds.length === 0
+              ? [{ ...data, id: uid(), roomId: null, groupId }]
+              : roomIds.map((roomId) => ({ ...data, id: uid(), roomId, groupId }))
+          return {
+            renovation: { ...state.renovation, steps: [...state.renovation.steps, ...copies] },
+          }
+        }),
+
+      updateStepGroup: (groupId, patch) =>
+        set((state) => ({
+          renovation: {
+            ...state.renovation,
+            steps: state.renovation.steps.map((step) =>
+              step.groupId === groupId ? { ...step, ...patch } : step,
+            ),
+          },
+        })),
+
       updateStep: (id, patch) =>
         set((state) => ({
           renovation: {
@@ -279,6 +304,14 @@ export const useStore = create<StoreState>()(
           renovation: {
             ...state.renovation,
             steps: state.renovation.steps.filter((step) => step.id !== id),
+          },
+        })),
+
+      removeStepGroup: (groupId) =>
+        set((state) => ({
+          renovation: {
+            ...state.renovation,
+            steps: state.renovation.steps.filter((step) => step.groupId !== groupId),
           },
         })),
 

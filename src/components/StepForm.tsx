@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { addDays } from 'date-fns'
-import { Trash2, TriangleAlert } from 'lucide-react'
+import { Home, Trash2, TriangleAlert } from 'lucide-react'
 import { cx } from '../lib/cx'
-import { durationLabel, fmtDay } from '../lib/format'
+import { durationLabel, fmtDay, plural } from '../lib/format'
 import {
   fromISODate,
   renovationEndISO,
@@ -32,17 +32,31 @@ interface FormState {
 interface StepFormProps {
   open: boolean
   step: Step | null
-  defaults?: { startDate?: string; professionalId?: string | null; roomId?: string | null }
+  defaults?: {
+    startDate?: string
+    professionalId?: string | null
+    roomId?: string | null
+    allRooms?: boolean
+  }
   onClose: () => void
 }
 
 export function StepForm({ open, step, defaults, onClose }: StepFormProps) {
   const renovation = useStore((state) => state.renovation)
   const addStep = useStore((state) => state.addStep)
+  const addStepCopies = useStore((state) => state.addStepCopies)
   const updateStep = useStore((state) => state.updateStep)
+  const updateStepGroup = useStore((state) => state.updateStepGroup)
   const removeStep = useStore((state) => state.removeStep)
+  const removeStepGroup = useStore((state) => state.removeStepGroup)
   const setDurationDays = useStore((state) => state.setDurationDays)
   const notify = useStore((state) => state.notify)
+
+  const allRoomsMode = !step && defaults?.allRooms === true
+  const groupedMode = Boolean(step?.groupId)
+  const groupSize = step?.groupId
+    ? renovation.steps.filter((candidate) => candidate.groupId === step.groupId).length
+    : 0
 
   const [form, setForm] = useState<FormState>({
     title: '',
@@ -74,7 +88,7 @@ export function StepForm({ open, step, defaults, onClose }: StepFormProps) {
     setForm({
       title: '',
       professionalId: defaults?.professionalId ?? null,
-      roomId: defaults?.roomId ?? current.rooms[0]?.id ?? null,
+      roomId: defaults?.allRooms ? null : defaults?.roomId ?? current.rooms[0]?.id ?? null,
       startDate: defaults?.startDate ?? suggestNextStart(current.steps, current.startDate),
       durationDays: 3,
       status: 'todo',
@@ -91,7 +105,7 @@ export function StepForm({ open, step, defaults, onClose }: StepFormProps) {
     form.title.trim().length > 0 &&
     form.durationDays >= 1 &&
     /^\d{4}-\d{2}-\d{2}$/.test(form.startDate) &&
-    (renovation.rooms.length === 0 || form.roomId !== null)
+    (allRoomsMode || groupedMode || renovation.rooms.length === 0 || form.roomId !== null)
 
   const extendToFit = () => {
     const candidate: Step = {
@@ -112,19 +126,32 @@ export function StepForm({ open, step, defaults, onClose }: StepFormProps) {
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!canSubmit) return
-    const payload = {
+    const base = {
       title: form.title.trim(),
       professionalId: form.professionalId,
-      roomId: form.roomId,
       startDate: form.startDate,
       durationDays: form.durationDays,
       status: form.status,
       notes: form.notes.trim() || undefined,
     }
-    if (step) {
-      updateStep(step.id, payload)
+    if (allRoomsMode) {
+      addStepCopies(
+        base,
+        renovation.rooms.map((room) => room.id),
+      )
+      notify(
+        'success',
+        renovation.rooms.length === 0
+          ? 'Etapa adicionada ao cronograma geral.'
+          : `Etapa adicionada em ${plural(renovation.rooms.length, 'cômodo', 'cômodos')}.`,
+      )
+    } else if (step?.groupId) {
+      updateStepGroup(step.groupId, { ...base, roomId: form.roomId })
+      notify('info', 'Etapa atualizada em todos os cômodos.')
+    } else if (step) {
+      updateStep(step.id, { ...base, roomId: form.roomId })
     } else {
-      addStep(payload)
+      addStep({ ...base, roomId: form.roomId })
       notify('success', 'Etapa adicionada.')
     }
     onClose()
@@ -143,29 +170,50 @@ export function StepForm({ open, step, defaults, onClose }: StepFormProps) {
           />
         </Field>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Cômodo" htmlFor="step-room">
-            <Select
-              id="step-room"
-              value={form.roomId ?? ''}
-              onChange={(event) => setForm({ ...form, roomId: event.target.value || null })}
-            >
-              {renovation.rooms.length === 0 ? (
-                <option value="">Nenhum cômodo cadastrado</option>
-              ) : null}
-              {renovation.rooms.length > 0 && form.roomId === null ? (
-                <option value="" disabled>
-                  Selecione um cômodo
-                </option>
-              ) : null}
-              {renovation.rooms.map((room) => (
-                <option key={room.id} value={room.id}>
-                  {room.name}
-                  {room.hidden ? ' (oculto)' : ''}
-                </option>
-              ))}
-            </Select>
-          </Field>
+        {allRoomsMode || groupedMode ? (
+          <div className="flex items-start gap-2 rounded-lg bg-indigo-50/70 px-3 py-2 text-xs leading-relaxed text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
+            <Home size={13} className="mt-0.5 shrink-0" />
+            <span>
+              {groupedMode
+                ? `Esta etapa está vinculada a todos os cômodos${
+                    renovation.rooms.length > 0
+                      ? ` (${renovation.rooms.map((room) => room.name).join(', ')})`
+                      : ''
+                  } — as alterações valem para todos.`
+                : renovation.rooms.length > 0
+                  ? `Esta etapa será criada em todos os cômodos: ${renovation.rooms
+                      .map((room) => room.name)
+                      .join(', ')}.`
+                  : 'Nenhum cômodo cadastrado — a etapa ficará apenas no cronograma geral.'}
+            </span>
+          </div>
+        ) : null}
+
+        <div className={cx('grid gap-3', !allRoomsMode && !groupedMode && 'grid-cols-2')}>
+          {!allRoomsMode && !groupedMode ? (
+            <Field label="Cômodo" htmlFor="step-room">
+              <Select
+                id="step-room"
+                value={form.roomId ?? ''}
+                onChange={(event) => setForm({ ...form, roomId: event.target.value || null })}
+              >
+                {renovation.rooms.length === 0 ? (
+                  <option value="">Nenhum cômodo cadastrado</option>
+                ) : null}
+                {renovation.rooms.length > 0 && form.roomId === null ? (
+                  <option value="" disabled>
+                    Selecione um cômodo
+                  </option>
+                ) : null}
+                {renovation.rooms.map((room) => (
+                  <option key={room.id} value={room.id}>
+                    {room.name}
+                    {room.hidden ? ' (oculto)' : ''}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          ) : null}
           <Field label="Profissional" htmlFor="step-professional">
             <Select
               id="step-professional"
@@ -294,12 +342,21 @@ export function StepForm({ open, step, defaults, onClose }: StepFormProps) {
       <ConfirmDialog
         open={confirmDelete}
         title="Excluir etapa?"
-        message={`“${step?.title ?? ''}” será removida do cronograma.`}
+        message={
+          step?.groupId
+            ? `“${step.title}” será removida dos ${groupSize} cômodos em que foi criada.`
+            : `“${step?.title ?? ''}” será removida do cronograma.`
+        }
         onCancel={() => setConfirmDelete(false)}
         onConfirm={() => {
           if (step) {
-            removeStep(step.id)
-            notify('info', 'Etapa excluída.')
+            if (step.groupId) {
+              removeStepGroup(step.groupId)
+              notify('info', 'Etapa removida de todos os cômodos.')
+            } else {
+              removeStep(step.id)
+              notify('info', 'Etapa excluída.')
+            }
           }
           onClose()
         }}

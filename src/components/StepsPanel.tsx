@@ -26,6 +26,22 @@ export function StepsPanel() {
       ),
     [renovation.steps],
   )
+  const groupSizes = useMemo(() => {
+    const sizes = new Map<string, number>()
+    for (const step of renovation.steps) {
+      if (step.groupId) sizes.set(step.groupId, (sizes.get(step.groupId) ?? 0) + 1)
+    }
+    return sizes
+  }, [renovation.steps])
+  const displayedSteps = useMemo(() => {
+    const seenGroups = new Set<string>()
+    return sorted.filter((step) => {
+      if (!step.groupId) return true
+      if (seenGroups.has(step.groupId)) return false
+      seenGroups.add(step.groupId)
+      return true
+    })
+  }, [sorted])
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -36,7 +52,7 @@ export function StepsPanel() {
       </div>
       <ul className="thin-scrollbar min-h-0 flex-1 space-y-1.5 overflow-y-auto px-3 pb-3">
         <AnimatePresence initial={false}>
-          {sorted.map((step) => {
+          {displayedSteps.map((step) => {
             const owner = renovation.professionals.find(
               (professional) => professional.id === step.professionalId,
             )
@@ -72,7 +88,11 @@ export function StepsPanel() {
                     {statusIcon(step)}
                   </div>
                   <div className="mt-1 truncate pl-4 text-xs text-slate-500 dark:text-slate-400">
-                    {room ? `${room.name} · ` : ''}
+                    {step.groupId
+                      ? `Todos os cômodos (${groupSizes.get(step.groupId) ?? 1}) · `
+                      : room
+                        ? `${room.name} · `
+                        : ''}
                     {owner ? `${owner.name} · ` : 'Sem responsável · '}
                     {fmtRange(step.startDate, stepEndISO(step))} · {durationLabel(step.durationDays)}
                   </div>

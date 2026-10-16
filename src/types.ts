@@ -28,6 +28,8 @@ export interface Step {
   professionalId: string | null
   /** The room this step happens in. */
   roomId: string | null
+  /** Links copies of a "general" step that applies to every room. */
+  groupId?: string
   /** Inclusive start day, as yyyy-MM-dd. */
   startDate: string
   /** Inclusive duration in days (>= 1). */

@@ -105,12 +105,14 @@ export function sanitizeRenovation(input: unknown): Renovation {
       const status = STATUSES.includes(entry.status as StepStatus) ? (entry.status as StepStatus) : 'todo'
       const professionalId = asString(entry.professionalId)
       const roomId = asString(entry.roomId)
+      const groupId = asString(entry.groupId)
       const notes = asString(entry.notes)
       return {
         id: asString(entry.id) || uid(),
         title: asString(entry.title) || `Etapa ${index + 1}`,
         professionalId: professionalIds.has(professionalId) ? professionalId : null,
         roomId: roomIds.has(roomId) ? roomId : null,
+        ...(groupId ? { groupId } : {}),
         startDate: ISO_DATE.test(start) ? start : startDate,
         durationDays: Number.isFinite(duration) && duration >= 1 ? duration : 1,
         status,
