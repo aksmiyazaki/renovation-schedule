@@ -1,0 +1,116 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+  }
+
+  body {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  :root {
+    --cal-line: #e2e8f0;
+    --cal-line-strong: #cbd5e1;
+    --cal-weekend: rgba(241, 245, 249, 0.75);
+    --cal-header-bg: rgba(255, 255, 255, 0.92);
+    --cal-ghost: rgba(100, 116, 139, 0.55);
+  }
+
+  .dark {
+    --cal-line: #1e293b;
+    --cal-line-strong: #334155;
+    --cal-weekend: rgba(2, 6, 23, 0.4);
+    --cal-header-bg: rgba(15, 23, 42, 0.92);
+    --cal-ghost: rgba(148, 163, 184, 0.55);
+  }
+}
+
+@layer components {
+  .bar-stripes {
+    background-image: repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.35) 0 5px,
+      rgba(255, 255, 255, 0) 5px 10px
+    );
+  }
+
+  .thin-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: var(--cal-line-strong) transparent;
+  }
+
+  .thin-scrollbar::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  .thin-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--cal-line-strong);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  .thin-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  html,
+  body,
+  #root {
+    height: auto !important;
+  }
+
+  .app-shell {
+    display: block !important;
+    height: auto !important;
+  }
+
+  .app-main {
+    display: block !important;
+  }
+
+  .calendar-panel {
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .calendar-scroll {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .cal-sticky {
+    position: static !important;
+  }
+
+  .cal-badge {
+    display: none !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

@@ -1,0 +1,275 @@
+import { useEffect, useState } from 'react'
+import type { FormEvent } from 'react'
+import { addDays } from 'date-fns'
+import { Trash2, TriangleAlert } from 'lucide-react'
+import { cx } from '../lib/cx'
+import { durationLabel, fmtDay } from '../lib/format'
+import {
+  fromISODate,
+  renovationEndISO,
+  requiredDurationDays,
+  suggestNextStart,
+  toISODate,
+} from '../lib/scheduling'
+import { STATUS_LABELS } from '../lib/status'
+import { useStore } from '../state/store'
+import type { Step, StepStatus } from '../types'
+import { ConfirmDialog, Modal } from './ui/Modal'
+import { Button, Field, Input, Select, Textarea } from './ui/controls'
+
+const STATUSES: StepStatus[] = ['todo', 'in_progress', 'done']
+
+interface FormState {
+  title: string
+  professionalId: string | null
+  startDate: string
+  durationDays: number
+  status: StepStatus
+  notes: string
+}
+
+interface StepFormProps {
+  open: boolean
+  step: Step | null
+  defaults?: { startDate?: string; professionalId?: string | null }
+  onClose: () => void
+}
+
+export function StepForm({ open, step, defaults, onClose }: StepFormProps) {
+  const renovation = useStore((state) => state.renovation)
+  const addStep = useStore((state) => state.addStep)
+  const updateStep = useStore((state) => state.updateStep)
+  const removeStep = useStore((state) => state.removeStep)
+  const setDurationDays = useStore((state) => state.setDurationDays)
+  const notify = useStore((state) => state.notify)
+
+  const [form, setForm] = useState<FormState>({
+    title: '',
+    professionalId: null,
+    startDate: renovation.startDate,
+    durationDays: 3,
+    status: 'todo',
+    notes: '',
+  })
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    setConfirmDelete(false)
+    if (step) {
+      setForm({
+        title: step.title,
+        professionalId: step.professionalId,
+        startDate: step.startDate,
+        durationDays: step.durationDays,
+        status: step.status,
+        notes: step.notes ?? '',
+      })
+      return
+    }
+    const current = useStore.getState().renovation
+    setForm({
+      title: '',
+      professionalId: defaults?.professionalId ?? null,
+      startDate: defaults?.startDate ?? suggestNextStart(current.steps, current.startDate),
+      durationDays: 3,
+      status: 'todo',
+      notes: '',
+    })
+  }, [open, step, defaults])
+
+  const endISO = toISODate(
+    addDays(fromISODate(form.startDate), Math.max(0, form.durationDays - 1)),
+  )
+  const outside =
+    form.startDate < renovation.startDate || endISO > renovationEndISO(renovation)
+  const canSubmit =
+    form.title.trim().length > 0 && form.durationDays >= 1 && /^\d{4}-\d{2}-\d{2}$/.test(form.startDate)
+
+  const extendToFit = () => {
+    const candidate: Step = {
+      id: '__draft',
+      title: form.title || 'Draft',
+      professionalId: form.professionalId,
+      startDate: form.startDate,
+      durationDays: form.durationDays,
+      status: form.status,
+    }
+    const steps = [...renovation.steps.filter((existing) => existing.id !== step?.id), candidate]
+    const required = requiredDurationDays(steps, renovation.startDate)
+    setDurationDays(Math.ceil(required / 7) * 7)
+    notify('info', 'Renovation window extended.')
+  }
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!canSubmit) return
+    const payload = {
+      title: form.title.trim(),
+      professionalId: form.professionalId,
+      startDate: form.startDate,
+      durationDays: form.durationDays,
+      status: form.status,
+      notes: form.notes.trim() || undefined,
+    }
+    if (step) {
+      updateStep(step.id, payload)
+    } else {
+      addStep(payload)
+      notify('success', 'Step added.')
+    }
+    onClose()
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title={step ? 'Edit step' : 'New step'}>
+      <form onSubmit={submit} className="space-y-4">
+        <Field label="Title" htmlFor="step-title">
+          <Input
+            id="step-title"
+            autoFocus
+            value={form.title}
+            onChange={(event) => setForm({ ...form, title: event.target.value })}
+            placeholder="e.g. Tile the kitchen floor"
+          />
+        </Field>
+
+        <Field label="Professional" htmlFor="step-professional">
+          <Select
+            id="step-professional"
+            value={form.professionalId ?? ''}
+            onChange={(event) => setForm({ ...form, professionalId: event.target.value || null })}
+          >
+            <option value="">Unassigned</option>
+            {renovation.professionals.map((professional) => (
+              <option key={professional.id} value={professional.id}>
+                {professional.name}
+                {professional.trade ? ` — ${professional.trade}` : ''}
+              </option>
+            ))}
+          </Select>
+        </Field>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Start date" htmlFor="step-start">
+            <Input
+              id="step-start"
+              type="date"
+              value={form.startDate}
+              onChange={(event) => setForm({ ...form, startDate: event.target.value })}
+            />
+          </Field>
+          <Field label="Duration (days)" htmlFor="step-duration">
+            <Input
+              id="step-duration"
+              type="number"
+              min={1}
+              value={form.durationDays}
+              onChange={(event) => {
+                const next = parseInt(event.target.value, 10)
+                setForm({ ...form, durationDays: Number.isFinite(next) ? next : 1 })
+              }}
+            />
+            <div className="mt-1.5 flex gap-1">
+              {[1, 3, 7, 14].map((days) => (
+                <button
+                  key={days}
+                  type="button"
+                  onClick={() => setForm({ ...form, durationDays: days })}
+                  className={cx(
+                    'rounded-md px-1.5 py-0.5 text-[10px] font-medium transition-colors',
+                    form.durationDays === days
+                      ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300'
+                      : 'bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700',
+                  )}
+                >
+                  {days === 7 ? '1w' : days === 14 ? '2w' : `${days}d`}
+                </button>
+              ))}
+            </div>
+          </Field>
+        </div>
+
+        <div className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
+          <p>
+            Ends <span className="font-medium text-slate-700 dark:text-slate-200">{fmtDay(endISO)}</span>{' '}
+            · {durationLabel(Math.max(1, form.durationDays))}
+          </p>
+          {outside ? (
+            <p className="mt-1 flex flex-wrap items-center gap-1 text-rose-600 dark:text-rose-400">
+              <TriangleAlert size={12} className="shrink-0" />
+              Outside the renovation window (ends {fmtDay(renovationEndISO(renovation))})
+              <button
+                type="button"
+                onClick={extendToFit}
+                className="font-medium underline underline-offset-2 hover:no-underline"
+              >
+                Extend renovation
+              </button>
+            </p>
+          ) : null}
+        </div>
+
+        <Field label="Status">
+          <div className="flex gap-1">
+            {STATUSES.map((status) => (
+              <button
+                key={status}
+                type="button"
+                onClick={() => setForm({ ...form, status })}
+                className={cx(
+                  'flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors',
+                  form.status === status
+                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-400/60 dark:bg-indigo-500/15 dark:text-indigo-300'
+                    : 'border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800',
+                )}
+              >
+                {STATUS_LABELS[status]}
+              </button>
+            ))}
+          </div>
+        </Field>
+
+        <Field label="Notes" htmlFor="step-notes">
+          <Textarea
+            id="step-notes"
+            rows={2}
+            value={form.notes}
+            onChange={(event) => setForm({ ...form, notes: event.target.value })}
+            placeholder="Optional details…"
+          />
+        </Field>
+
+        <div className="flex items-center justify-between pt-1">
+          {step ? (
+            <Button variant="danger-ghost" size="sm" onClick={() => setConfirmDelete(true)}>
+              <Trash2 size={14} /> Delete
+            </Button>
+          ) : (
+            <span />
+          )}
+          <div className="flex gap-2">
+            <Button onClick={onClose}>Cancel</Button>
+            <Button type="submit" variant="primary" disabled={!canSubmit}>
+              {step ? 'Save changes' : 'Add step'}
+            </Button>
+          </div>
+        </div>
+      </form>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        title="Delete step?"
+        message={`“${step?.title ?? ''}” will be removed from the schedule.`}
+        onCancel={() => setConfirmDelete(false)}
+        onConfirm={() => {
+          if (step) {
+            removeStep(step.id)
+            notify('info', 'Step deleted.')
+          }
+          onClose()
+        }}
+      />
+    </Modal>
+  )
+}
