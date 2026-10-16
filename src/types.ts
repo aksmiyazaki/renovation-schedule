@@ -11,6 +11,8 @@ export type CalendarView = 'timeline' | 'months'
 export interface Room {
   id: string
   name: string
+  /** Hidden rooms (and their steps) are not shown on the calendar. */
+  hidden: boolean
 }
 
 export interface Professional {

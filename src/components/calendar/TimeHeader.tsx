@@ -61,15 +61,28 @@ export function TimeHeader({ days, dayWidth, todayIndex, holidays }: TimeHeaderP
           <div className="flex" style={{ height: 40 }}>
             {days.map((date, index) => {
               const holiday = holidays.get(toISODate(date))
+              const isStart = index === 0
+              const isEnd = index === days.length - 1
+              const title = [
+                holiday,
+                isStart ? 'Início da reforma' : null,
+                isEnd ? 'Término da reforma' : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')
               return (
                 <div
                   key={index}
-                  title={holiday}
+                  title={title || undefined}
                   className={cx(
                     'relative flex flex-col items-center justify-center border-l border-[var(--cal-line)]',
-                    holiday
-                      ? 'bg-[var(--cal-holiday)]'
-                      : isWeekend(date) && 'bg-[var(--cal-weekend)]',
+                    isStart
+                      ? 'bg-emerald-500/[0.08]'
+                      : isEnd
+                        ? 'bg-indigo-500/[0.08]'
+                        : holiday
+                          ? 'bg-[var(--cal-holiday)]'
+                          : isWeekend(date) && 'bg-[var(--cal-weekend)]',
                   )}
                   style={{ width: dayWidth }}
                 >
@@ -83,9 +96,13 @@ export function TimeHeader({ days, dayWidth, todayIndex, holidays }: TimeHeaderP
                       'text-[11px] leading-tight',
                       index === todayIndex
                         ? 'flex size-5 items-center justify-center rounded-full bg-rose-500 font-semibold text-white'
-                        : holiday
-                          ? 'font-medium text-rose-600 dark:text-rose-400'
-                          : 'font-medium text-slate-600 dark:text-slate-300',
+                        : isStart
+                          ? 'flex size-5 items-center justify-center rounded-full bg-emerald-500 font-semibold text-white'
+                          : isEnd
+                            ? 'flex size-5 items-center justify-center rounded-full bg-indigo-500 font-semibold text-white'
+                            : holiday
+                              ? 'font-medium text-rose-600 dark:text-rose-400'
+                              : 'font-medium text-slate-600 dark:text-slate-300',
                     )}
                   >
                     {format(date, 'd')}

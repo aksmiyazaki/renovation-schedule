@@ -161,6 +161,7 @@ export function StepForm({ open, step, defaults, onClose }: StepFormProps) {
               {renovation.rooms.map((room) => (
                 <option key={room.id} value={room.id}>
                   {room.name}
+                  {room.hidden ? ' (oculto)' : ''}
                 </option>
               ))}
             </Select>

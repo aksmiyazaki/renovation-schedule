@@ -4,7 +4,7 @@ A single-page web app to plan a renovation:
 
 - Set **when the renovation starts** and **how long it lasts** (in days).
 - Add **steps** (demolition, plumbing, tiling, …) with a start date, duration and a **room**.
-- Add **rooms** (kitchen, bathroom, hallway, …) — the calendar can show one lane per room, or one lane per professional.
+- Add **rooms** (kitchen, bathroom, hallway, …) — reorder them with the arrows, hide the ones you don't want to see right now (their steps leave the calendar too, but nothing is deleted), and switch the calendar between room lanes and professional lanes.
 - Add **professionals** (plumber, electrician, …) and assign each step to one of them.
 - See everything **two ways**: a **calendar view** (one month grid per room/professional, weeks as rows, month cards side by side) and a **timeline view**, switchable with one toggle. Colored task bars, weekends shaded, **Brazilian holidays** marked in red (with their names), a today marker, and **hover tooltips** with the task details.
 - **Drag** a bar to move it, drag its right edge to change the duration — in both views, snapping to days.

@@ -291,18 +291,31 @@ function WeekRow({
           const inMonth = date.getMonth() === month.getMonth()
           const inRange = iso >= rangeStartISO && iso <= rangeEndISO
           const isToday = iso === todayISO
+          const isStart = iso === rangeStartISO
+          const isEnd = iso === rangeEndISO
+          const title = [
+            holiday,
+            isStart ? 'Início da reforma' : null,
+            isEnd ? 'Término da reforma' : null,
+          ]
+            .filter(Boolean)
+            .join(' · ')
           return (
             <div
               key={iso}
-              title={holiday}
+              title={title || undefined}
               onClick={inMonth ? () => handleCellClick(iso) : undefined}
               className={cx(
                 'relative border-l border-[var(--cal-line)] px-1 pt-1 first:border-l-0',
-                holiday
-                  ? 'bg-[var(--cal-holiday)]'
-                  : isWeekend(date)
-                    ? 'bg-[var(--cal-weekend)]'
-                    : '',
+                isStart
+                  ? 'bg-emerald-500/[0.08]'
+                  : isEnd
+                    ? 'bg-indigo-500/[0.08]'
+                    : holiday
+                      ? 'bg-[var(--cal-holiday)]'
+                      : isWeekend(date)
+                        ? 'bg-[var(--cal-weekend)]'
+                        : '',
                 inMonth ? 'cursor-pointer' : '',
               )}
             >
@@ -311,11 +324,15 @@ function WeekRow({
                   'inline-flex items-center justify-center text-[10px] leading-none',
                   isToday
                     ? 'size-4 rounded-full bg-rose-500 font-semibold text-white'
-                    : holiday
-                      ? 'font-medium text-rose-600 dark:text-rose-400'
-                      : inMonth
-                        ? cx('font-medium text-slate-600 dark:text-slate-300', !inRange && 'opacity-50')
-                        : 'text-slate-300 dark:text-slate-600',
+                    : isStart
+                      ? 'size-4 rounded-full bg-emerald-500 font-semibold text-white'
+                      : isEnd
+                        ? 'size-4 rounded-full bg-indigo-500 font-semibold text-white'
+                        : holiday
+                          ? 'font-medium text-rose-600 dark:text-rose-400'
+                          : inMonth
+                            ? cx('font-medium text-slate-600 dark:text-slate-300', !inRange && 'opacity-50')
+                            : 'text-slate-300 dark:text-slate-600',
                 )}
               >
                 {format(date, 'd')}

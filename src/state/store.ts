@@ -66,6 +66,8 @@ interface StoreState {
   addRoom: (data: Omit<Room, 'id'>) => void
   updateRoom: (id: string, patch: Partial<Omit<Room, 'id'>>) => void
   removeRoom: (id: string) => void
+  moveRoom: (id: string, direction: -1 | 1) => void
+  toggleRoomHidden: (id: string) => void
 
   addStep: (data: Omit<Step, 'id'>) => void
   updateStep: (id: string, patch: Partial<Omit<Step, 'id'>>) => void
@@ -230,6 +232,26 @@ export const useStore = create<StoreState>()(
             rooms: state.renovation.rooms.filter((room) => room.id !== id),
             steps: state.renovation.steps.map((step) =>
               step.roomId === id ? { ...step, roomId: null } : step,
+            ),
+          },
+        })),
+
+      moveRoom: (id, direction) =>
+        set((state) => {
+          const rooms = [...state.renovation.rooms]
+          const index = rooms.findIndex((room) => room.id === id)
+          const target = index + direction
+          if (index === -1 || target < 0 || target >= rooms.length) return {}
+          ;[rooms[index], rooms[target]] = [rooms[target], rooms[index]]
+          return { renovation: { ...state.renovation, rooms } }
+        }),
+
+      toggleRoomHidden: (id) =>
+        set((state) => ({
+          renovation: {
+            ...state.renovation,
+            rooms: state.renovation.rooms.map((room) =>
+              room.id === id ? { ...room, hidden: !room.hidden } : room,
             ),
           },
         })),

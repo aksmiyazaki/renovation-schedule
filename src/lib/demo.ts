@@ -28,9 +28,9 @@ export function createDemoRenovation(): Renovation {
     startDate: day(0),
     durationDays: 56,
     rooms: [
-      { id: 'room-kitchen', name: 'Cozinha' },
-      { id: 'room-bathroom', name: 'Banheiro' },
-      { id: 'room-hallway', name: 'Corredor' },
+      { id: 'room-kitchen', name: 'Cozinha', hidden: false },
+      { id: 'room-bathroom', name: 'Banheiro', hidden: false },
+      { id: 'room-hallway', name: 'Corredor', hidden: false },
     ],
     professionals: [
       { id: 'pro-marco', name: 'Marco', trade: 'Demolição e drywall', color: '#f97316' },

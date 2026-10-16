@@ -40,7 +40,7 @@ export function RoomForm({ open, room, onClose }: RoomFormProps) {
     if (room) {
       updateRoom(room.id, payload)
     } else {
-      addRoom(payload)
+      addRoom({ ...payload, hidden: false })
       notify('success', 'Cômodo adicionado.')
     }
     onClose()

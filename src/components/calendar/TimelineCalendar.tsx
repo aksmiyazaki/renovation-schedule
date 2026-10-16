@@ -37,17 +37,25 @@ import { TaskTooltip } from './TaskTooltip'
 import { TimeHeader } from './TimeHeader'
 
 function buildLanes(renovation: Renovation, group: CalendarGroup): Lane[] {
+  const hiddenRoomIds = new Set(
+    renovation.rooms.filter((room) => room.hidden).map((room) => room.id),
+  )
+  const isVisibleStep = (step: Step) => !(step.roomId && hiddenRoomIds.has(step.roomId))
+
   if (group === 'rooms') {
-    return renovation.rooms.map((room, index) => {
-      const steps = renovation.steps.filter((step) => step.roomId === room.id)
-      return {
-        id: room.id,
-        name: room.name,
-        subtitle: plural(steps.length, 'etapa', 'etapas'),
-        dotColor: roomAccent(index),
-        steps,
-      }
-    })
+    return renovation.rooms
+      .map((room, index) => ({ room, index }))
+      .filter(({ room }) => !room.hidden)
+      .map(({ room, index }) => {
+        const steps = renovation.steps.filter((step) => step.roomId === room.id)
+        return {
+          id: room.id,
+          name: room.name,
+          subtitle: plural(steps.length, 'etapa', 'etapas'),
+          dotColor: roomAccent(index),
+          steps,
+        }
+      })
   }
 
   const professionalLanes: Lane[] = renovation.professionals.map((professional) => ({
@@ -55,9 +63,13 @@ function buildLanes(renovation: Renovation, group: CalendarGroup): Lane[] {
     name: professional.name,
     subtitle: professional.trade,
     dotColor: professional.color,
-    steps: renovation.steps.filter((step) => step.professionalId === professional.id),
+    steps: renovation.steps.filter(
+      (step) => step.professionalId === professional.id && isVisibleStep(step),
+    ),
   }))
-  const unassigned = renovation.steps.filter((step) => !step.professionalId)
+  const unassigned = renovation.steps.filter(
+    (step) => !step.professionalId && isVisibleStep(step),
+  )
   return [
     ...professionalLanes,
     {
@@ -395,6 +407,7 @@ export function TimelineCalendar() {
     : null
 
   const zoomIndex = ZOOM_ORDER.indexOf(zoom)
+  const hiddenRoomCount = renovation.rooms.filter((room) => room.hidden).length
 
   return (
     <section className="flex min-h-0 flex-1 flex-col px-2 pb-2 sm:px-4 sm:pb-4">
@@ -430,8 +443,11 @@ export function TimelineCalendar() {
           />
           <p className="text-xs text-slate-500 dark:text-slate-400">
             {plural(renovation.steps.length, 'etapa', 'etapas')} ·{' '}
-            {plural(renovation.rooms.length, 'cômodo', 'cômodos')} ·{' '}
-            {plural(renovation.professionals.length, 'profissional', 'profissionais')} ·{' '}
+            {plural(renovation.rooms.length, 'cômodo', 'cômodos')}
+            {hiddenRoomCount > 0
+              ? ` (${hiddenRoomCount} ${hiddenRoomCount === 1 ? 'oculto' : 'ocultos'})`
+              : ''}{' '}
+            · {plural(renovation.professionals.length, 'profissional', 'profissionais')} ·{' '}
             {plural(renovation.durationDays, 'dia', 'dias')}
           </p>
           <div className="ml-auto flex items-center gap-1">
@@ -463,7 +479,9 @@ export function TimelineCalendar() {
       <div className="calendar-panel relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         {lanes.length === 0 ? (
           <div className="flex flex-1 items-center justify-center p-8 text-center text-sm text-slate-400 dark:text-slate-500">
-            Nenhum cômodo cadastrado. Adicione cômodos na aba “Cômodos” do painel lateral.
+            {renovation.rooms.length === 0
+              ? 'Nenhum cômodo cadastrado. Adicione cômodos na aba “Cômodos” do painel lateral.'
+              : 'Todos os cômodos estão ocultos. Mostre um cômodo na aba “Cômodos” do painel lateral.'}
           </div>
         ) : calendarView === 'months' ? (
           <MonthsCalendar
@@ -543,6 +561,20 @@ export function TimelineCalendar() {
                     <div className="h-full w-[2px] bg-rose-500/60" />
                   </div>
                 ) : null}
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-y-0 z-[14]"
+                  style={{ left: dayWidth / 2 - 1 }}
+                >
+                  <div className="h-full w-[2px] bg-emerald-500/50" />
+                </div>
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-y-0 z-[14]"
+                  style={{ left: (totalDays - 1) * dayWidth + dayWidth / 2 - 1 }}
+                >
+                  <div className="h-full w-[2px] bg-indigo-500/50" />
+                </div>
               </div>
             </div>
           </div>

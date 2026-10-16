@@ -71,6 +71,7 @@ export function sanitizeRenovation(input: unknown): Renovation {
     .map((entry, index) => ({
       id: asString(entry.id) || uid(),
       name: asString(entry.name) || `Cômodo ${index + 1}`,
+      hidden: entry.hidden === true,
     }))
 
   // De-duplicate room ids so step references stay unambiguous.
