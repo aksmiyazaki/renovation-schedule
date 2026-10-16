@@ -33,12 +33,12 @@ export function createDemoRenovation(): Renovation {
       { id: 'room-hallway', name: 'Corredor', hidden: false },
     ],
     professionals: [
-      { id: 'pro-marco', name: 'Marco', trade: 'Demolição e drywall', color: '#f97316' },
-      { id: 'pro-anna', name: 'Anna', trade: 'Hidráulica', color: '#3b82f6' },
-      { id: 'pro-luc', name: 'Luc', trade: 'Eletricista', color: '#f59e0b' },
-      { id: 'pro-sophie', name: 'Sophie', trade: 'Azulejos e revestimentos', color: '#14b8a6' },
-      { id: 'pro-nina', name: 'Nina', trade: 'Marcenaria', color: '#8b5cf6' },
-      { id: 'pro-paul', name: 'Paul', trade: 'Pintura e acabamento', color: '#ec4899' },
+      { id: 'pro-marco', name: 'Marco', trade: 'Demolição e drywall', color: '#f97316', hidden: false },
+      { id: 'pro-anna', name: 'Anna', trade: 'Hidráulica', color: '#3b82f6', hidden: false },
+      { id: 'pro-luc', name: 'Luc', trade: 'Eletricista', color: '#f59e0b', hidden: false },
+      { id: 'pro-sophie', name: 'Sophie', trade: 'Azulejos e revestimentos', color: '#14b8a6', hidden: false },
+      { id: 'pro-nina', name: 'Nina', trade: 'Marcenaria', color: '#8b5cf6', hidden: false },
+      { id: 'pro-paul', name: 'Paul', trade: 'Pintura e acabamento', color: '#ec4899', hidden: false },
     ],
     steps: [
       {

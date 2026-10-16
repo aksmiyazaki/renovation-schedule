@@ -20,6 +20,8 @@ export interface Professional {
   name: string
   trade: string
   color: string
+  /** Hidden professionals (and their steps) are not shown on the calendar. */
+  hidden: boolean
 }
 
 export interface Step {

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Renovation, Step } from '../types'
 import {
   collectGeneralSteps,
+  dedupeGroups,
   isStepOutsideWindow,
   layoutLane,
   overflowDays,
@@ -97,6 +98,23 @@ describe('collectGeneralSteps', () => {
     const a = makeStep({ id: 'a', groupId: 'g1', roomId: 'room-1' })
     const b = makeStep({ id: 'b', groupId: 'g1', roomId: 'room-2' })
     expect(collectGeneralSteps([a, b], new Set(['room-1', 'room-2'])).map((step) => step.id)).toEqual(['a'])
+  })
+})
+
+describe('dedupeGroups', () => {
+  it('keeps only one representative per linked group', () => {
+    const a = makeStep({ id: 'a', groupId: 'g1', roomId: 'room-1' })
+    const b = makeStep({ id: 'b', groupId: 'g1', roomId: 'room-2' })
+    const c = makeStep({ id: 'c', groupId: 'g1', roomId: 'room-3' })
+    expect(dedupeGroups([a, b, c]).map((step) => step.id)).toEqual(['a'])
+  })
+
+  it('keeps regular steps and separate groups untouched', () => {
+    const single = makeStep({ id: 'single', roomId: 'room-1' })
+    const a = makeStep({ id: 'a', groupId: 'g1' })
+    const b = makeStep({ id: 'b', groupId: 'g1' })
+    const c = makeStep({ id: 'c', groupId: 'g2' })
+    expect(dedupeGroups([single, a, b, c]).map((step) => step.id)).toEqual(['single', 'a', 'c'])
   })
 })
 

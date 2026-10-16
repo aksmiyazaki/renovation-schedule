@@ -62,12 +62,15 @@ interface StoreState {
   addProfessional: (data: Omit<Professional, 'id'>) => void
   updateProfessional: (id: string, patch: Partial<Omit<Professional, 'id'>>) => void
   removeProfessional: (id: string) => void
+  toggleProfessionalHidden: (id: string) => void
 
   addRoom: (data: Omit<Room, 'id'>) => void
   updateRoom: (id: string, patch: Partial<Omit<Room, 'id'>>) => void
   removeRoom: (id: string) => void
   moveRoom: (id: string, direction: -1 | 1) => void
   toggleRoomHidden: (id: string) => void
+  setAllRoomsHidden: (hidden: boolean) => void
+  setAllProfessionalsHidden: (hidden: boolean) => void
 
   addStep: (data: Omit<Step, 'id'>) => void
   addStepCopies: (data: Omit<Step, 'id' | 'roomId' | 'groupId'>, roomIds: string[]) => void
@@ -212,6 +215,16 @@ export const useStore = create<StoreState>()(
           },
         })),
 
+      toggleProfessionalHidden: (id) =>
+        set((state) => ({
+          renovation: {
+            ...state.renovation,
+            professionals: state.renovation.professionals.map((professional) =>
+              professional.id === id ? { ...professional, hidden: !professional.hidden } : professional,
+            ),
+          },
+        })),
+
       addRoom: (data) =>
         set((state) => ({
           renovation: {
@@ -256,6 +269,25 @@ export const useStore = create<StoreState>()(
             rooms: state.renovation.rooms.map((room) =>
               room.id === id ? { ...room, hidden: !room.hidden } : room,
             ),
+          },
+        })),
+
+      setAllRoomsHidden: (hidden) =>
+        set((state) => ({
+          renovation: {
+            ...state.renovation,
+            rooms: state.renovation.rooms.map((room) => ({ ...room, hidden })),
+          },
+        })),
+
+      setAllProfessionalsHidden: (hidden) =>
+        set((state) => ({
+          renovation: {
+            ...state.renovation,
+            professionals: state.renovation.professionals.map((professional) => ({
+              ...professional,
+              hidden,
+            })),
           },
         })),
 

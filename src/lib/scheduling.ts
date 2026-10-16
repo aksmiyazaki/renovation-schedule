@@ -62,6 +62,20 @@ export function collectGeneralSteps(steps: Step[], hiddenRoomIds: Set<string> = 
   return [...singles, ...representatives]
 }
 
+/**
+ * Keeps only one representative per linked group. Used by views grouped by
+ * professional, where the copies of a general task would otherwise repeat.
+ */
+export function dedupeGroups(steps: Step[]): Step[] {
+  const seen = new Set<string>()
+  return steps.filter((step) => {
+    if (!step.groupId) return true
+    if (seen.has(step.groupId)) return false
+    seen.add(step.groupId)
+    return true
+  })
+}
+
 /** First free day after the latest scheduled step (or the renovation start when empty). */
 export function suggestNextStart(steps: Step[], renovationStart: string): string {
   if (steps.length === 0) return renovationStart

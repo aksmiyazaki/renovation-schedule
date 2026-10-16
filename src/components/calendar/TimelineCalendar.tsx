@@ -8,10 +8,11 @@ import { fmtDay, plural } from '../../lib/format'
 import { holidayMap } from '../../lib/holidays'
 import { UNASSIGNED_COLOR } from '../../lib/palette'
 import {
+  collectGeneralSteps,
+  dedupeGroups,
   fromISODate,
   isStepOutsideWindow,
   layoutLane,
-  collectGeneralSteps,
   overflowDays,
   renovationEndISO,
   requiredDurationDays,
@@ -43,10 +44,20 @@ function buildLanes(renovation: Renovation, group: CalendarGroup): Lane[] {
   const hiddenRoomIds = new Set(
     renovation.rooms.filter((room) => room.hidden).map((room) => room.id),
   )
-  const isVisibleStep = (step: Step) => !(step.roomId && hiddenRoomIds.has(step.roomId))
+  const hiddenProfessionalIds = new Set(
+    renovation.professionals
+      .filter((professional) => professional.hidden)
+      .map((professional) => professional.id),
+  )
+  const isVisibleStep = (step: Step) =>
+    !(step.roomId && hiddenRoomIds.has(step.roomId)) &&
+    !(step.professionalId && hiddenProfessionalIds.has(step.professionalId))
 
   if (group === 'rooms') {
-    const generalSteps = collectGeneralSteps(renovation.steps, hiddenRoomIds)
+    const generalSteps = collectGeneralSteps(
+      renovation.steps.filter(isVisibleStep),
+      hiddenRoomIds,
+    )
     const generalLane: Lane = {
       id: GENERAL_LANE_ID,
       name: 'Reforma geral',
@@ -59,7 +70,9 @@ function buildLanes(renovation: Renovation, group: CalendarGroup): Lane[] {
       .map((room, index) => ({ room, index }))
       .filter(({ room }) => !room.hidden)
       .map(({ room, index }) => {
-        const steps = renovation.steps.filter((step) => step.roomId === room.id)
+        const steps = renovation.steps.filter(
+          (step) => step.roomId === room.id && isVisibleStep(step),
+        )
         return {
           id: room.id,
           name: room.name,
@@ -71,17 +84,23 @@ function buildLanes(renovation: Renovation, group: CalendarGroup): Lane[] {
     return [generalLane, ...roomLanes]
   }
 
-  const professionalLanes: Lane[] = renovation.professionals.map((professional) => ({
-    id: professional.id,
-    name: professional.name,
-    subtitle: professional.trade,
-    dotColor: professional.color,
-    steps: renovation.steps.filter(
-      (step) => step.professionalId === professional.id && isVisibleStep(step),
-    ),
-  }))
-  const unassigned = renovation.steps.filter(
-    (step) => !step.professionalId && isVisibleStep(step),
+  const professionalLanes: Lane[] = renovation.professionals
+    .filter((professional) => !professional.hidden)
+    .map((professional) => ({
+      id: professional.id,
+      name: professional.name,
+      subtitle: professional.trade,
+      dotColor: professional.color,
+      // Tarefas do cronograma geral aparecem uma vez por profissional,
+      // não uma por cômodo.
+      steps: dedupeGroups(
+        renovation.steps.filter(
+          (step) => step.professionalId === professional.id && isVisibleStep(step),
+        ),
+      ),
+    }))
+  const unassigned = dedupeGroups(
+    renovation.steps.filter((step) => !step.professionalId && isVisibleStep(step)),
   )
   return [
     ...professionalLanes,
@@ -448,6 +467,9 @@ export function TimelineCalendar() {
 
   const zoomIndex = ZOOM_ORDER.indexOf(zoom)
   const hiddenRoomCount = renovation.rooms.filter((room) => room.hidden).length
+  const hiddenProfessionalCount = renovation.professionals.filter(
+    (professional) => professional.hidden,
+  ).length
 
   return (
     <section className="flex min-h-0 flex-1 flex-col px-2 pb-2 sm:px-4 sm:pb-4">
@@ -487,8 +509,11 @@ export function TimelineCalendar() {
             {hiddenRoomCount > 0
               ? ` (${hiddenRoomCount} ${hiddenRoomCount === 1 ? 'oculto' : 'ocultos'})`
               : ''}{' '}
-            · {plural(renovation.professionals.length, 'profissional', 'profissionais')} ·{' '}
-            {plural(renovation.durationDays, 'dia', 'dias')}
+            · {plural(renovation.professionals.length, 'profissional', 'profissionais')}
+            {hiddenProfessionalCount > 0
+              ? ` (${hiddenProfessionalCount} ${hiddenProfessionalCount === 1 ? 'oculto' : 'ocultos'})`
+              : ''}{' '}
+            · {plural(renovation.durationDays, 'dia', 'dias')}
           </p>
           <div className="ml-auto flex items-center gap-1">
             {calendarView === 'timeline' ? (

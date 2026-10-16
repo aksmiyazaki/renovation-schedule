@@ -226,6 +226,7 @@ export function StepForm({ open, step, defaults, onClose }: StepFormProps) {
                 <option key={professional.id} value={professional.id}>
                   {professional.name}
                   {professional.trade ? ` — ${professional.trade}` : ''}
+                  {professional.hidden ? ' (oculto)' : ''}
                 </option>
               ))}
             </Select>

@@ -55,7 +55,7 @@ export function ProfessionalForm({ open, professional, onClose }: ProfessionalFo
     if (professional) {
       updateProfessional(professional.id, payload)
     } else {
-      addProfessional(payload)
+      addProfessional({ ...payload, hidden: false })
       notify('success', 'Profissional adicionado.')
     }
     onClose()

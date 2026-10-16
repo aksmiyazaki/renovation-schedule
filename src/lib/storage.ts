@@ -88,6 +88,7 @@ export function sanitizeRenovation(input: unknown): Renovation {
       name: asString(entry.name) || `Profissional ${index + 1}`,
       trade: asString(entry.trade),
       color: HEX_COLOR.test(asString(entry.color)) ? asString(entry.color) : PALETTE[index % PALETTE.length],
+      hidden: entry.hidden === true,
     }))
 
   // De-duplicate professional ids so step references stay unambiguous.

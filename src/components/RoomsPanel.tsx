@@ -13,7 +13,18 @@ export function RoomsPanel() {
   const renovation = useStore((state) => state.renovation)
   const moveRoom = useStore((state) => state.moveRoom)
   const toggleRoomHidden = useStore((state) => state.toggleRoomHidden)
+  const setAllRoomsHidden = useStore((state) => state.setAllRoomsHidden)
+  const notify = useStore((state) => state.notify)
   const [editing, setEditing] = useState<Room | 'new' | null>(null)
+
+  const allHidden =
+    renovation.rooms.length > 0 && renovation.rooms.every((room) => room.hidden)
+  const noneHidden = renovation.rooms.every((room) => !room.hidden)
+
+  const hideAll = (hidden: boolean) => {
+    setAllRoomsHidden(hidden)
+    notify('info', hidden ? 'Todos os cômodos foram ocultados.' : 'Todos os cômodos foram exibidos.')
+  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -21,6 +32,24 @@ export function RoomsPanel() {
         <Button variant="primary" className="w-full" onClick={() => setEditing('new')}>
           <Plus size={15} /> Adicionar cômodo
         </Button>
+        <div className="mt-1.5 flex gap-1.5">
+          <Button
+            size="sm"
+            className="flex-1"
+            disabled={allHidden || renovation.rooms.length === 0}
+            onClick={() => hideAll(true)}
+          >
+            <EyeOff size={13} /> Ocultar todos
+          </Button>
+          <Button
+            size="sm"
+            className="flex-1"
+            disabled={noneHidden || renovation.rooms.length === 0}
+            onClick={() => hideAll(false)}
+          >
+            <Eye size={13} /> Exibir todos
+          </Button>
+        </div>
       </div>
       <ul className="thin-scrollbar min-h-0 flex-1 space-y-1.5 overflow-y-auto px-3 pb-3">
         <AnimatePresence initial={false}>

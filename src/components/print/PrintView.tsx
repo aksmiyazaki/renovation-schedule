@@ -32,6 +32,22 @@ export function PrintView() {
     () => new Set(renovation.rooms.filter((room) => room.hidden).map((room) => room.id)),
     [renovation.rooms],
   )
+  const hiddenProfessionalIds = useMemo(
+    () =>
+      new Set(
+        renovation.professionals
+          .filter((professional) => professional.hidden)
+          .map((professional) => professional.id),
+      ),
+    [renovation.professionals],
+  )
+  const hiddenProfessionals = useMemo(
+    () => renovation.professionals.filter((professional) => professional.hidden),
+    [renovation.professionals],
+  )
+  const isVisibleStep = (step: Step) =>
+    !(step.roomId && hiddenRoomIds.has(step.roomId)) &&
+    !(step.professionalId && hiddenProfessionalIds.has(step.professionalId))
   const visibleRooms = useMemo(
     () => renovation.rooms.filter((room) => !room.hidden),
     [renovation.rooms],
@@ -70,7 +86,7 @@ export function PrintView() {
   const tableSteps = useMemo(() => {
     const seenGroups = new Set<string>()
     return renovation.steps
-      .filter((step) => !(step.roomId && hiddenRoomIds.has(step.roomId)))
+      .filter(isVisibleStep)
       .sort((a, b) => a.startDate.localeCompare(b.startDate) || a.title.localeCompare(b.title))
       .filter((step) => {
         if (!step.groupId) return true
@@ -78,7 +94,7 @@ export function PrintView() {
         seenGroups.add(step.groupId)
         return true
       })
-  }, [renovation.steps, hiddenRoomIds])
+  }, [renovation.steps, hiddenRoomIds, hiddenProfessionalIds])
 
   const groupSizes = useMemo(() => {
     const sizes = new Map<string, number>()
@@ -106,6 +122,12 @@ export function PrintView() {
           {plural(renovation.rooms.length, 'cômodo', 'cômodos')} ·{' '}
           {plural(renovation.professionals.length, 'profissional', 'profissionais')}
         </p>
+        {hiddenProfessionals.length > 0 ? (
+          <p className="mt-1 text-xs text-slate-400">
+            Equipes ocultas (não aparecem nesta impressão):{' '}
+            {hiddenProfessionals.map((professional) => professional.name).join(', ')}.
+          </p>
+        ) : null}
 
         {tableSteps.length === 0 ? (
           <p className="mt-6 text-sm text-slate-400">Nenhuma etapa cadastrada.</p>
@@ -157,7 +179,9 @@ export function PrintView() {
       {/* Uma página por cômodo */}
       {visibleRooms.map((room) => {
         const roomIndex = renovation.rooms.indexOf(room)
-        const steps = renovation.steps.filter((step) => step.roomId === room.id)
+        const steps = renovation.steps.filter(
+          (step) => step.roomId === room.id && isVisibleStep(step),
+        )
         return (
           <section key={room.id} className="print-page p-6">
             <div className="flex items-center gap-3">
