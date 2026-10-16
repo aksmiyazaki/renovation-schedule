@@ -25,6 +25,22 @@ function StatusIcon({ status }: { status: SyncStatus }) {
   return <CloudOff size={12} className="text-slate-400" />
 }
 
+const AUTH_ERROR_HINTS: Record<string, string> = {
+  'auth/unauthorized-domain':
+    'Adicione este domínio em Firebase → Authentication → Settings → Authorized domains.',
+  'auth/operation-not-allowed':
+    'Ative o provedor Google em Firebase → Authentication → Sign-in method.',
+  'auth/configuration-not-found':
+    'Ative o Authentication no projeto Firebase (Authentication → Get started).',
+  'auth/invalid-api-key': 'A chave VITE_FIREBASE_API_KEY no .env parece incorreta.',
+  'auth/api-key-not-valid.-please-pass-a-valid-api-key.':
+    'A chave VITE_FIREBASE_API_KEY no .env parece incorreta.',
+  'auth/popup-blocked': 'Permita popups para este site e tente novamente.',
+  'auth/network-request-failed': 'Falha de rede — verifique a conexão e tente novamente.',
+  'auth/internal-error':
+    'Erro interno do Firebase — confira o VITE_FIREBASE_PROJECT_ID e o VITE_FIREBASE_APP_ID.',
+}
+
 export function SyncControl() {
   const syncUser = useStore((state) => state.syncUser)
   const syncStatus = useStore((state) => state.syncStatus)
@@ -39,9 +55,16 @@ export function SyncControl() {
       await signInWithGoogle()
     } catch (error) {
       const code = (error as { code?: string }).code ?? ''
-      if (code !== 'auth/popup-closed-by-user' && code !== 'auth/cancelled-popup-request') {
-        notify('error', 'Não foi possível entrar. Verifique a configuração do Firebase.')
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+        return
       }
+      const hint = code ? AUTH_ERROR_HINTS[code] : undefined
+      notify(
+        'error',
+        hint
+          ? `${hint} (${code})`
+          : `Não foi possível entrar${code ? ` (${code})` : ''}. Verifique a configuração do Firebase.`,
+      )
     }
   }
 
