@@ -28,7 +28,11 @@ export function ProfessionalForm({ open, professional, onClose }: ProfessionalFo
     if (!open) return
     setConfirmDelete(false)
     if (professional) {
-      setForm({ name: professional.name, trade: professional.trade, color: professional.color })
+      setForm({
+        name: professional.name,
+        trade: professional.trade,
+        color: professional.color,
+      })
       return
     }
     const count = useStore.getState().renovation.professionals.length
@@ -43,45 +47,49 @@ export function ProfessionalForm({ open, professional, onClose }: ProfessionalFo
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!canSubmit) return
-    const payload = { name: form.name.trim(), trade: form.trade.trim(), color: form.color }
+    const payload = {
+      name: form.name.trim(),
+      trade: form.trade.trim(),
+      color: form.color,
+    }
     if (professional) {
       updateProfessional(professional.id, payload)
     } else {
       addProfessional(payload)
-      notify('success', 'Professional added.')
+      notify('success', 'Profissional adicionado.')
     }
     onClose()
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={professional ? 'Edit professional' : 'New professional'}>
+    <Modal open={open} onClose={onClose} title={professional ? 'Editar profissional' : 'Novo profissional'}>
       <form onSubmit={submit} className="space-y-4">
-        <Field label="Name" htmlFor="pro-name">
+        <Field label="Nome" htmlFor="pro-name">
           <Input
             id="pro-name"
             autoFocus
             value={form.name}
             onChange={(event) => setForm({ ...form, name: event.target.value })}
-            placeholder="e.g. Anna"
+            placeholder="ex.: Ana"
           />
         </Field>
 
-        <Field label="Trade" htmlFor="pro-trade">
+        <Field label="Profissão" htmlFor="pro-trade">
           <Input
             id="pro-trade"
             value={form.trade}
             onChange={(event) => setForm({ ...form, trade: event.target.value })}
-            placeholder="e.g. Plumber"
+            placeholder="ex.: Encanador"
           />
         </Field>
 
-        <Field label="Color">
+        <Field label="Cor">
           <div className="grid grid-cols-6 gap-2">
             {PALETTE.map((color) => (
               <button
                 key={color}
                 type="button"
-                aria-label={`Use color ${color}`}
+                aria-label={`Usar a cor ${color}`}
                 onClick={() => setForm({ ...form, color })}
                 style={{ background: color }}
                 className={cx(
@@ -98,15 +106,15 @@ export function ProfessionalForm({ open, professional, onClose }: ProfessionalFo
         <div className="flex items-center justify-between pt-1">
           {professional ? (
             <Button variant="danger-ghost" size="sm" onClick={() => setConfirmDelete(true)}>
-              <Trash2 size={14} /> Delete
+              <Trash2 size={14} /> Excluir
             </Button>
           ) : (
             <span />
           )}
           <div className="flex gap-2">
-            <Button onClick={onClose}>Cancel</Button>
+            <Button onClick={onClose}>Cancelar</Button>
             <Button type="submit" variant="primary" disabled={!canSubmit}>
-              {professional ? 'Save changes' : 'Add professional'}
+              {professional ? 'Salvar alterações' : 'Adicionar profissional'}
             </Button>
           </div>
         </div>
@@ -114,13 +122,13 @@ export function ProfessionalForm({ open, professional, onClose }: ProfessionalFo
 
       <ConfirmDialog
         open={confirmDelete}
-        title="Delete professional?"
+        title="Excluir profissional?"
         message={
           professional
-            ? `${professional.name} will be removed. ${
+            ? `${professional.name} será removido. ${
                 stepCount === 1
-                  ? 'Their step becomes unassigned.'
-                  : `Their ${stepCount} steps become unassigned.`
+                  ? 'Sua etapa ficará sem responsável.'
+                  : `Suas ${stepCount} etapas ficarão sem responsável.`
               }`
             : ''
         }
@@ -128,7 +136,7 @@ export function ProfessionalForm({ open, professional, onClose }: ProfessionalFo
         onConfirm={() => {
           if (professional) {
             removeProfessional(professional.id)
-            notify('info', 'Professional deleted.')
+            notify('info', 'Profissional excluído.')
           }
           onClose()
         }}

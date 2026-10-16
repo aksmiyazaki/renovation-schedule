@@ -59,7 +59,7 @@ describe('decideSyncAction', () => {
     ).toBe('push')
   })
 
-  it('waits before resolving cloud-ahead conflicts from a cache snapshot', () => {
+  it('waits before resolving a cloud-ahead change from a cache snapshot', () => {
     expect(
       decideSyncAction(
         input({ remoteUpdatedAt: 200, syncUpdatedAt: 100, localUpdatedAt: 300, fromCache: true }),

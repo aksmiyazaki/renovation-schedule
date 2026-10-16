@@ -27,30 +27,8 @@ export function stepEndISO(step: Step): string {
   return toISODate(stepEnd(step))
 }
 
-/** Inclusive overlap test between two steps (regardless of owner). */
-export function stepsOverlap(a: Step, b: Step): boolean {
-  return a.startDate <= stepEndISO(b) && b.startDate <= stepEndISO(a)
-}
-
 export function isStepOutsideWindow(step: Step, renovation: Renovation): boolean {
   return step.startDate < renovation.startDate || stepEndISO(step) > renovationEndISO(renovation)
-}
-
-/** Steps that overlap another step owned by the same professional. */
-export function findConflictingStepIds(steps: Step[]): Set<string> {
-  const conflicts = new Set<string>()
-  for (let i = 0; i < steps.length; i += 1) {
-    for (let j = i + 1; j < steps.length; j += 1) {
-      const a = steps[i]
-      const b = steps[j]
-      if (!a.professionalId || a.professionalId !== b.professionalId) continue
-      if (stepsOverlap(a, b)) {
-        conflicts.add(a.id)
-        conflicts.add(b.id)
-      }
-    }
-  }
-  return conflicts
 }
 
 /** First free day after the latest scheduled step (or the renovation start when empty). */

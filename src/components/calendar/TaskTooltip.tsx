@@ -1,22 +1,28 @@
 import { useLayoutEffect, useRef } from 'react'
 import { motion } from 'motion/react'
-import { CalendarDays, TriangleAlert } from 'lucide-react'
+import { CalendarDays, DoorOpen, TriangleAlert } from 'lucide-react'
 import { cx } from '../../lib/cx'
 import { durationLabel, fmtDay } from '../../lib/format'
 import { UNASSIGNED_COLOR } from '../../lib/palette'
 import { stepEndISO } from '../../lib/scheduling'
 import { STATUS_LABELS, STATUS_PILL } from '../../lib/status'
-import type { Professional, Step } from '../../types'
+import type { Professional, Room, Step } from '../../types'
 
 interface TaskTooltipProps {
   step: Step
   professional: Professional | null
+  room: Room | null
   anchor: { x: number; y: number }
-  hasConflict: boolean
   outside: boolean
 }
 
-export function TaskTooltip({ step, professional, anchor, hasConflict, outside }: TaskTooltipProps) {
+export function TaskTooltip({
+  step,
+  professional,
+  room,
+  anchor,
+  outside,
+}: TaskTooltipProps) {
   const ref = useRef<HTMLDivElement>(null)
 
   useLayoutEffect(() => {
@@ -29,7 +35,7 @@ export function TaskTooltip({ step, professional, anchor, hasConflict, outside }
     if (top + rect.height > window.innerHeight - 8) top = anchor.y - rect.height - 18
     element.style.left = `${Math.max(8, left)}px`
     element.style.top = `${Math.max(8, top)}px`
-  }, [anchor.x, anchor.y, step.id, hasConflict, outside])
+  }, [anchor.x, anchor.y, step.id, outside])
 
   return (
     <motion.div
@@ -63,7 +69,12 @@ export function TaskTooltip({ step, professional, anchor, hasConflict, outside }
       <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
         {professional
           ? `${professional.name}${professional.trade ? ` · ${professional.trade}` : ''}`
-          : 'Unassigned'}
+          : 'Sem responsável'}
+      </p>
+
+      <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+        <DoorOpen size={12} className="shrink-0" />
+        {room ? room.name : 'Sem cômodo'}
       </p>
 
       <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
@@ -73,14 +84,7 @@ export function TaskTooltip({ step, professional, anchor, hasConflict, outside }
 
       {outside ? (
         <p className="mt-1.5 flex items-center gap-1 text-xs font-medium text-rose-500">
-          <TriangleAlert size={12} className="shrink-0" /> Outside the renovation window
-        </p>
-      ) : null}
-
-      {hasConflict ? (
-        <p className="mt-1.5 flex items-center gap-1 text-xs font-medium text-amber-500">
-          <TriangleAlert size={12} className="shrink-0" /> Overlaps another{' '}
-          {professional?.name ?? 'unassigned'} step
+          <TriangleAlert size={12} className="shrink-0" /> Fora do prazo da reforma
         </p>
       ) : null}
 

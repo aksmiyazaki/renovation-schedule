@@ -20,6 +20,7 @@
     --cal-line: #e2e8f0;
     --cal-line-strong: #cbd5e1;
     --cal-weekend: rgba(241, 245, 249, 0.75);
+    --cal-holiday: rgba(244, 63, 94, 0.08);
     --cal-header-bg: rgba(255, 255, 255, 0.92);
     --cal-ghost: rgba(100, 116, 139, 0.55);
   }
@@ -28,6 +29,7 @@
     --cal-line: #1e293b;
     --cal-line-strong: #334155;
     --cal-weekend: rgba(2, 6, 23, 0.4);
+    --cal-holiday: rgba(244, 63, 94, 0.14);
     --cal-header-bg: rgba(15, 23, 42, 0.92);
     --cal-ghost: rgba(148, 163, 184, 0.55);
   }
@@ -61,6 +63,13 @@
 
   .thin-scrollbar::-webkit-scrollbar-track {
     background: transparent;
+  }
+
+  /* On touch devices, always show a hint of the resize handle. */
+  @media (pointer: coarse) {
+    .bar-resize-handle {
+      opacity: 0.7;
+    }
   }
 }
 

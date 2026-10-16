@@ -2,6 +2,8 @@ import { useMemo } from 'react'
 import { format, isWeekend } from 'date-fns'
 import { Users } from 'lucide-react'
 import { cx } from '../../lib/cx'
+import { fmtMonthShort, fmtMonthYear, fmtWeekdayNarrow, fmtWeekdayShort } from '../../lib/format'
+import { toISODate } from '../../lib/scheduling'
 import { ROW_HEADER_WIDTH } from './constants'
 
 interface MonthGroup {
@@ -15,9 +17,10 @@ interface TimeHeaderProps {
   days: Date[]
   dayWidth: number
   todayIndex: number | null
+  holidays: Map<string, string>
 }
 
-export function TimeHeader({ days, dayWidth, todayIndex }: TimeHeaderProps) {
+export function TimeHeader({ days, dayWidth, todayIndex, holidays }: TimeHeaderProps) {
   const months = useMemo<MonthGroup[]>(() => {
     const groups: MonthGroup[] = []
     days.forEach((date, index) => {
@@ -39,49 +42,57 @@ export function TimeHeader({ days, dayWidth, todayIndex }: TimeHeaderProps) {
           className="cal-sticky sticky left-0 z-40 flex items-center gap-1.5 border-r border-[var(--cal-line)] bg-[var(--cal-header-bg)] px-3 text-[11px] font-semibold tracking-wider text-slate-400 uppercase dark:text-slate-500"
           style={{ width: ROW_HEADER_WIDTH }}
         >
-          <Users size={13} /> Team
+          <Users size={13} /> Equipe
         </div>
         <div className="relative" style={{ width: days.length * dayWidth }}>
           <div className="relative border-b border-[var(--cal-line)]" style={{ height: 22 }}>
             {months.map((month) => (
               <div
                 key={month.key}
-                className="absolute flex h-full items-center overflow-hidden border-l border-[var(--cal-line-strong)] px-1.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400"
+                className="absolute flex h-full items-center overflow-hidden border-l border-[var(--cal-line-strong)] px-1.5 text-[11px] font-semibold text-slate-500 capitalize dark:text-slate-400"
                 style={{ left: month.startIndex * dayWidth, width: month.count * dayWidth }}
               >
                 {month.count * dayWidth >= 64
-                  ? format(month.date, 'MMMM yyyy')
-                  : format(month.date, 'MMM')}
+                  ? fmtMonthYear(month.date)
+                  : fmtMonthShort(month.date)}
               </div>
             ))}
           </div>
           <div className="flex" style={{ height: 40 }}>
-            {days.map((date, index) => (
-              <div
-                key={index}
-                className={cx(
-                  'relative flex flex-col items-center justify-center border-l border-[var(--cal-line)]',
-                  isWeekend(date) && 'bg-[var(--cal-weekend)]',
-                )}
-                style={{ width: dayWidth }}
-              >
-                {dayWidth >= 26 ? (
-                  <span className="text-[9px] font-medium tracking-wide text-slate-400 uppercase dark:text-slate-500">
-                    {format(date, dayWidth >= 40 ? 'EEE' : 'EEEEE')}
-                  </span>
-                ) : null}
-                <span
+            {days.map((date, index) => {
+              const holiday = holidays.get(toISODate(date))
+              return (
+                <div
+                  key={index}
+                  title={holiday}
                   className={cx(
-                    'text-[11px] leading-tight',
-                    index === todayIndex
-                      ? 'flex size-5 items-center justify-center rounded-full bg-rose-500 font-semibold text-white'
-                      : 'font-medium text-slate-600 dark:text-slate-300',
+                    'relative flex flex-col items-center justify-center border-l border-[var(--cal-line)]',
+                    holiday
+                      ? 'bg-[var(--cal-holiday)]'
+                      : isWeekend(date) && 'bg-[var(--cal-weekend)]',
                   )}
+                  style={{ width: dayWidth }}
                 >
-                  {format(date, 'd')}
-                </span>
-              </div>
-            ))}
+                  {dayWidth >= 26 ? (
+                    <span className="text-[9px] font-medium tracking-wide text-slate-400 uppercase dark:text-slate-500">
+                      {dayWidth >= 40 ? fmtWeekdayShort(date) : fmtWeekdayNarrow(date)}
+                    </span>
+                  ) : null}
+                  <span
+                    className={cx(
+                      'text-[11px] leading-tight',
+                      index === todayIndex
+                        ? 'flex size-5 items-center justify-center rounded-full bg-rose-500 font-semibold text-white'
+                        : holiday
+                          ? 'font-medium text-rose-600 dark:text-rose-400'
+                          : 'font-medium text-slate-600 dark:text-slate-300',
+                    )}
+                  >
+                    {format(date, 'd')}
+                  </span>
+                </div>
+              )
+            })}
           </div>
         </div>
       </div>

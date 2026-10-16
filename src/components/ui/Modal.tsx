@@ -63,7 +63,7 @@ export function Modal({ open, onClose, title, children, wide = false }: ModalPro
                 <button
                   type="button"
                   onClick={onClose}
-                  aria-label="Close"
+                  aria-label="Fechar"
                   className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                 >
                   <X size={16} />
@@ -92,7 +92,7 @@ export function ConfirmDialog({
   open,
   title,
   message,
-  confirmLabel = 'Delete',
+  confirmLabel = 'Excluir',
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -100,7 +100,7 @@ export function ConfirmDialog({
     <Modal open={open} onClose={onCancel} title={title}>
       <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">{message}</p>
       <div className="mt-5 flex justify-end gap-2">
-        <Button onClick={onCancel}>Cancel</Button>
+        <Button onClick={onCancel}>Cancelar</Button>
         <Button
           variant="danger"
           onClick={() => {

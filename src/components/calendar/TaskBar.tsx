@@ -1,5 +1,4 @@
-import { useRef, useState } from 'react'
-import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react'
+import type { MouseEvent as ReactMouseEvent } from 'react'
 import { addDays, differenceInCalendarDays } from 'date-fns'
 import { Check } from 'lucide-react'
 import { cx } from '../../lib/cx'
@@ -8,8 +7,7 @@ import { contrastText } from '../../lib/palette'
 import { fromISODate, toISODate } from '../../lib/scheduling'
 import type { Step } from '../../types'
 import { BAR_HEIGHT } from './constants'
-
-type DragKind = 'move' | 'resize'
+import { useBarDrag } from './useBarDrag'
 
 interface TaskBarProps {
   step: Step
@@ -18,7 +16,6 @@ interface TaskBarProps {
   dayWidth: number
   start: Date
   hovered: boolean
-  hasConflict: boolean
   outside: boolean
   onHover: (step: Step, event: ReactMouseEvent<HTMLDivElement>) => void
   onHoverEnd: () => void
@@ -34,7 +31,6 @@ export function TaskBar({
   dayWidth,
   start,
   hovered,
-  hasConflict,
   outside,
   onHover,
   onHoverEnd,
@@ -42,9 +38,14 @@ export function TaskBar({
   onMove,
   onResize,
 }: TaskBarProps) {
-  const [drag, setDrag] = useState<{ kind: DragKind; deltaDays: number } | null>(null)
-  const startXRef = useRef(0)
-  const movedRef = useRef(false)
+  const { drag, movedRef, begin, handlePointerMove, commit, cancel, handleKeyDown } = useBarDrag({
+    step,
+    dayWidth,
+    onMove,
+    onResize,
+    onOpen,
+    onHoverEnd,
+  })
 
   const dayIndex = differenceInCalendarDays(fromISODate(step.startDate), start)
   const baseLeft = dayIndex * dayWidth + 2
@@ -56,59 +57,6 @@ export function TaskBar({
     drag?.kind === 'resize'
       ? Math.max(dayWidth - 4, (step.durationDays + previewDelta) * dayWidth - 4)
       : baseWidth
-
-  const begin = (kind: DragKind) => (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0) return
-    event.preventDefault()
-    event.stopPropagation()
-    try {
-      event.currentTarget.setPointerCapture(event.pointerId)
-    } catch {
-      /* pointer capture is best-effort */
-    }
-    startXRef.current = event.clientX
-    movedRef.current = false
-    setDrag({ kind, deltaDays: 0 })
-    onHoverEnd()
-  }
-
-  const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (!drag) return
-    const delta = Math.round((event.clientX - startXRef.current) / dayWidth)
-    if (delta !== drag.deltaDays) {
-      if (delta !== 0) movedRef.current = true
-      setDrag({ kind: drag.kind, deltaDays: delta })
-    }
-  }
-
-  const commit = () => {
-    if (!drag) return
-    const { kind, deltaDays } = drag
-    setDrag(null)
-    if (!movedRef.current || deltaDays === 0) return
-    if (kind === 'move') {
-      onMove(step.id, toISODate(addDays(fromISODate(step.startDate), deltaDays)))
-    } else {
-      onResize(step.id, Math.max(1, step.durationDays + deltaDays))
-    }
-  }
-
-  const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault()
-      onOpen(step)
-      return
-    }
-    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-      event.preventDefault()
-      const delta = event.key === 'ArrowLeft' ? -1 : 1
-      if (event.shiftKey) {
-        onResize(step.id, Math.max(1, step.durationDays + delta))
-      } else {
-        onMove(step.id, toISODate(addDays(fromISODate(step.startDate), delta)))
-      }
-    }
-  }
 
   const previewStartISO = toISODate(
     addDays(fromISODate(step.startDate), drag?.kind === 'move' ? previewDelta : 0),
@@ -129,11 +77,11 @@ export function TaskBar({
       <div
         role="button"
         tabIndex={0}
-        aria-label={`${step.title}, ${fmtDay(step.startDate)} for ${durationLabel(step.durationDays)}`}
+        aria-label={`${step.title}, ${fmtDay(step.startDate)} por ${durationLabel(step.durationDays)}`}
         onPointerDown={begin('move')}
         onPointerMove={handlePointerMove}
         onPointerUp={commit}
-        onPointerCancel={() => setDrag(null)}
+        onPointerCancel={cancel}
         onKeyDown={handleKeyDown}
         onClick={(event) => {
           event.stopPropagation()
@@ -149,11 +97,7 @@ export function TaskBar({
             : 'cursor-grab transition-[left,width,box-shadow] duration-200 ease-out',
           hovered && !drag ? 'z-20 shadow-md brightness-105' : '',
           step.status === 'done' ? 'opacity-60' : '',
-          outside
-            ? 'outline-2 -outline-offset-2 outline-rose-400'
-            : hasConflict
-              ? 'outline-2 -outline-offset-2 outline-amber-400'
-              : '',
+          outside ? 'outline-2 -outline-offset-2 outline-rose-400' : '',
         )}
         style={{ left, width, top, height: BAR_HEIGHT, background: color, color: contrastText(color) }}
       >
@@ -168,13 +112,13 @@ export function TaskBar({
           <span className="cal-badge pointer-events-none absolute -top-7 left-0 z-30 rounded-md bg-slate-900 px-2 py-0.5 text-[10px] font-medium whitespace-nowrap text-white shadow-lg dark:bg-slate-100 dark:text-slate-900">
             {drag.kind === 'move'
               ? fmtDay(previewStartISO)
-              : `${durationLabel(previewDuration)} · ends ${fmtDay(previewEndISO)}`}
+              : `${durationLabel(previewDuration)} · termina ${fmtDay(previewEndISO)}`}
           </span>
         ) : null}
         <span
           aria-hidden
           onPointerDown={begin('resize')}
-          className="absolute top-0 right-0 flex h-full w-2.5 cursor-ew-resize items-center justify-center rounded-r-lg opacity-0 transition-opacity group-hover:opacity-100"
+          className="bar-resize-handle absolute top-0 right-0 flex h-full w-2.5 cursor-ew-resize items-center justify-center rounded-r-lg opacity-0 transition-opacity group-hover:opacity-100"
         >
           <span className="h-3 w-0.5 rounded-full bg-white/70" />
         </span>

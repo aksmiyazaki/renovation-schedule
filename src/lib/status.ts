@@ -1,9 +1,9 @@
 import type { StepStatus } from '../types'
 
 export const STATUS_LABELS: Record<StepStatus, string> = {
-  todo: 'To do',
-  in_progress: 'In progress',
-  done: 'Done',
+  todo: 'A fazer',
+  in_progress: 'Em andamento',
+  done: 'Concluída',
 }
 
 export const STATUS_PILL: Record<StepStatus, string> = {

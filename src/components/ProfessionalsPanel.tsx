@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Plus } from 'lucide-react'
+import { plural } from '../lib/format'
 import { useStore } from '../state/store'
 import type { Professional } from '../types'
 import { ProfessionalForm } from './ProfessionalForm'
@@ -14,7 +15,7 @@ export function ProfessionalsPanel() {
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="p-3">
         <Button variant="primary" className="w-full" onClick={() => setEditing('new')}>
-          <Plus size={15} /> Add professional
+          <Plus size={15} /> Adicionar profissional
         </Button>
       </div>
       <ul className="thin-scrollbar min-h-0 flex-1 space-y-1.5 overflow-y-auto px-3 pb-3">
@@ -46,7 +47,7 @@ export function ProfessionalsPanel() {
                       {professional.name}
                     </span>
                     <span className="shrink-0 text-[11px] text-slate-400">
-                      {count} {count === 1 ? 'step' : 'steps'}
+                      {plural(count, 'etapa', 'etapas')}
                     </span>
                   </div>
                   {professional.trade ? (
@@ -62,7 +63,7 @@ export function ProfessionalsPanel() {
       </ul>
       {renovation.professionals.length === 0 ? (
         <p className="px-4 pb-4 text-center text-xs text-slate-400">
-          No professionals yet. Add the people working on this renovation.
+          Nenhum profissional ainda. Adicione as pessoas que vão trabalhar nesta reforma.
         </p>
       ) : null}
       <ProfessionalForm

@@ -2,11 +2,12 @@
 
 A single-page web app to plan a renovation:
 
-- Set **when the renovation starts** and **how long it lasts** (weeks).
-- Add **steps** (demolition, plumbing, tiling, …) with a start date and duration.
+- Set **when the renovation starts** and **how long it lasts** (in days).
+- Add **steps** (demolition, plumbing, tiling, …) with a start date, duration and a **room**.
+- Add **rooms** (kitchen, bathroom, hallway, …) — the calendar can show one lane per room, or one lane per professional.
 - Add **professionals** (plumber, electrician, …) and assign each step to one of them.
-- See everything on a **timeline calendar**: one lane per professional, colored task bars across the whole period, weekends shaded, a today marker and **hover tooltips** with the task details.
-- **Drag** a bar to move it, drag its right edge to change the duration — snapping to days.
+- See everything **two ways**: a **calendar view** (one month grid per room/professional, weeks as rows, month cards side by side) and a **timeline view**, switchable with one toggle. Colored task bars, weekends shaded, **Brazilian holidays** marked in red (with their names), a today marker, and **hover tooltips** with the task details.
+- **Drag** a bar to move it, drag its right edge to change the duration — in both views, snapping to days.
 - Track **status** (to do / in progress / done), use **dark mode**, **print** the schedule, and **export/import** the plan as JSON.
 - Optional **cloud sync** (Firebase + Google sign-in) so the same plan is available on every device.
 
@@ -55,10 +56,21 @@ Without configuration the app is a local-only planner. To sync the plan across y
 
 How it behaves:
 
-- Every edit is pushed automatically (debounced) to `plans/{your uid}`; the newest edit wins in the rare case of conflicting offline changes.
+- Every edit is pushed automatically (debounced) to `plans/{your uid}`; if you edit offline on two devices, the newest edit wins.
 - The browser keeps its `localStorage` copy, so the app loads instantly and keeps working offline; changes sync when you're back online.
 - Signing out stops syncing; the local copy stays on that device.
 - Export/import remains available as a manual backup at all times.
+
+## Sharing a renovation (link with editing)
+
+Signed in? Click the **share icon** in the header to create a share link:
+
+- **Anyone with the link can view and edit** the plan in their browser — no account, no install. Changes sync live between everyone who has the link, and come back into your own plan (and your other devices) automatically.
+- **Stop sharing** (in the same dialog) deletes the shared copy immediately — the link stops working for everyone.
+- Opening a share link never touches the local plan of the device: it runs in a separate “shared editing” mode with a banner offering **Save a copy to my plan** or **Leave**.
+- The newest edit wins if two people change the plan at the same time — same rule as your personal sync.
+
+This uses a `shares/{id}` document in the same Firestore database; the rules in [`firestore.rules`](firestore.rules) allow public read/edit of that document but only its owner can create or delete it.
 
 ## Deploying to Vercel
 

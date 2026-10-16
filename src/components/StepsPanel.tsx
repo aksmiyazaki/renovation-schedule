@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { Circle, CircleCheck, CircleDot, Plus, TriangleAlert } from 'lucide-react'
 import { durationLabel, fmtRange } from '../lib/format'
 import { UNASSIGNED_COLOR } from '../lib/palette'
-import { findConflictingStepIds, isStepOutsideWindow, stepEndISO } from '../lib/scheduling'
+import { isStepOutsideWindow, stepEndISO } from '../lib/scheduling'
 import { useStore } from '../state/store'
 import type { Step } from '../types'
 import { StepForm } from './StepForm'
@@ -19,7 +19,6 @@ export function StepsPanel() {
   const renovation = useStore((state) => state.renovation)
   const [editing, setEditing] = useState<Step | 'new' | null>(null)
 
-  const conflicts = useMemo(() => findConflictingStepIds(renovation.steps), [renovation.steps])
   const sorted = useMemo(
     () =>
       [...renovation.steps].sort(
@@ -32,7 +31,7 @@ export function StepsPanel() {
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="p-3">
         <Button variant="primary" className="w-full" onClick={() => setEditing('new')}>
-          <Plus size={15} /> Add step
+          <Plus size={15} /> Adicionar etapa
         </Button>
       </div>
       <ul className="thin-scrollbar min-h-0 flex-1 space-y-1.5 overflow-y-auto px-3 pb-3">
@@ -41,8 +40,8 @@ export function StepsPanel() {
             const owner = renovation.professionals.find(
               (professional) => professional.id === step.professionalId,
             )
+            const room = renovation.rooms.find((candidate) => candidate.id === step.roomId)
             const outside = isStepOutsideWindow(step, renovation)
-            const hasConflict = conflicts.has(step.id)
             return (
               <motion.li
                 key={step.id}
@@ -66,21 +65,15 @@ export function StepsPanel() {
                     {outside ? (
                       <TriangleAlert
                         size={13}
-                        aria-label="Outside the renovation window"
+                        aria-label="Fora do prazo da reforma"
                         className="shrink-0 text-rose-500"
-                      />
-                    ) : null}
-                    {hasConflict ? (
-                      <TriangleAlert
-                        size={13}
-                        aria-label="Overlaps another step of the same professional"
-                        className="shrink-0 text-amber-500"
                       />
                     ) : null}
                     {statusIcon(step)}
                   </div>
                   <div className="mt-1 truncate pl-4 text-xs text-slate-500 dark:text-slate-400">
-                    {owner ? `${owner.name} · ` : 'Unassigned · '}
+                    {room ? `${room.name} · ` : ''}
+                    {owner ? `${owner.name} · ` : 'Sem responsável · '}
                     {fmtRange(step.startDate, stepEndISO(step))} · {durationLabel(step.durationDays)}
                   </div>
                 </button>
@@ -91,7 +84,7 @@ export function StepsPanel() {
       </ul>
       {renovation.steps.length === 0 ? (
         <p className="px-4 pb-4 text-center text-xs text-slate-400">
-          No steps yet. Add the first step of your renovation.
+          Nenhuma etapa ainda. Adicione a primeira etapa da sua reforma.
         </p>
       ) : null}
       <StepForm

@@ -1,14 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { Renovation, Step } from '../types'
 import {
-  findConflictingStepIds,
   isStepOutsideWindow,
   layoutLane,
   overflowDays,
   renovationEndISO,
   requiredDurationDays,
   stepEndISO,
-  stepsOverlap,
   suggestNextStart,
   toISODate,
 } from './scheduling'
@@ -17,6 +15,7 @@ const renovation: Renovation = {
   name: 'Test renovation',
   startDate: '2026-10-19',
   durationDays: 28,
+  rooms: [],
   professionals: [],
   steps: [],
 }
@@ -25,6 +24,7 @@ function makeStep(patch: Partial<Step> & { id: string }): Step {
   return {
     title: `Step ${patch.id}`,
     professionalId: 'pro-1',
+    roomId: null,
     startDate: '2026-10-19',
     durationDays: 3,
     status: 'todo',
@@ -52,20 +52,6 @@ describe('date helpers', () => {
   })
 })
 
-describe('stepsOverlap', () => {
-  it('detects steps sharing only a boundary day', () => {
-    const a = makeStep({ id: 'a', startDate: '2026-10-19', durationDays: 3 }) // 19 → 21
-    const b = makeStep({ id: 'b', startDate: '2026-10-21', durationDays: 3 }) // 21 → 23
-    expect(stepsOverlap(a, b)).toBe(true)
-  })
-
-  it('treats consecutive steps as non-overlapping when one ends before the other starts', () => {
-    const a = makeStep({ id: 'a', startDate: '2026-10-19', durationDays: 3 }) // 19 → 21
-    const b = makeStep({ id: 'b', startDate: '2026-10-22', durationDays: 3 }) // 22 → 24
-    expect(stepsOverlap(a, b)).toBe(false)
-  })
-})
-
 describe('isStepOutsideWindow', () => {
   it('is false for steps inside the window', () => {
     const step = makeStep({ id: 'a', startDate: '2026-10-19', durationDays: 7 })
@@ -80,32 +66,6 @@ describe('isStepOutsideWindow', () => {
   it('is true when a step starts before the window start', () => {
     const step = makeStep({ id: 'a', startDate: '2026-10-18', durationDays: 1 })
     expect(isStepOutsideWindow(step, renovation)).toBe(true)
-  })
-})
-
-describe('findConflictingStepIds', () => {
-  it('flags both steps when the same professional overlaps itself', () => {
-    const a = makeStep({ id: 'a', professionalId: 'pro-1', startDate: '2026-10-19', durationDays: 5 })
-    const b = makeStep({ id: 'b', professionalId: 'pro-1', startDate: '2026-10-21', durationDays: 5 })
-    expect([...findConflictingStepIds([a, b])].sort()).toEqual(['a', 'b'])
-  })
-
-  it('does not flag overlapping steps owned by different professionals', () => {
-    const a = makeStep({ id: 'a', professionalId: 'pro-1', startDate: '2026-10-19', durationDays: 5 })
-    const b = makeStep({ id: 'b', professionalId: 'pro-2', startDate: '2026-10-19', durationDays: 5 })
-    expect(findConflictingStepIds([a, b]).size).toBe(0)
-  })
-
-  it('does not flag non-overlapping steps of the same professional', () => {
-    const a = makeStep({ id: 'a', professionalId: 'pro-1', startDate: '2026-10-19', durationDays: 3 })
-    const b = makeStep({ id: 'b', professionalId: 'pro-1', startDate: '2026-10-25', durationDays: 3 })
-    expect(findConflictingStepIds([a, b]).size).toBe(0)
-  })
-
-  it('ignores unassigned steps', () => {
-    const a = makeStep({ id: 'a', professionalId: null, startDate: '2026-10-19', durationDays: 5 })
-    const b = makeStep({ id: 'b', professionalId: null, startDate: '2026-10-19', durationDays: 5 })
-    expect(findConflictingStepIds([a, b]).size).toBe(0)
   })
 })
 

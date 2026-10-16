@@ -8,12 +8,12 @@ import type { SyncStatus } from '../state/store'
 import { IconButton } from './ui/controls'
 
 const STATUS_TEXT: Record<SyncStatus, string> = {
-  unavailable: 'Cloud sync is not configured',
-  'signed-out': 'Signed out',
-  connecting: 'Connecting…',
-  syncing: 'Syncing…',
-  synced: 'All changes synced',
-  error: 'Sync error — retrying automatically',
+  unavailable: 'Sincronização em nuvem não configurada',
+  'signed-out': 'Desconectado',
+  connecting: 'Conectando…',
+  syncing: 'Sincronizando…',
+  synced: 'Todas as alterações sincronizadas',
+  error: 'Erro de sincronização — tentando novamente',
 }
 
 function StatusIcon({ status }: { status: SyncStatus }) {
@@ -28,10 +28,11 @@ function StatusIcon({ status }: { status: SyncStatus }) {
 export function SyncControl() {
   const syncUser = useStore((state) => state.syncUser)
   const syncStatus = useStore((state) => state.syncStatus)
+  const shareMode = useStore((state) => state.shareMode)
   const notify = useStore((state) => state.notify)
   const [menuOpen, setMenuOpen] = useState(false)
 
-  if (!firebaseEnabled) return null
+  if (!firebaseEnabled || shareMode) return null
 
   const handleSignIn = async () => {
     try {
@@ -39,7 +40,7 @@ export function SyncControl() {
     } catch (error) {
       const code = (error as { code?: string }).code ?? ''
       if (code !== 'auth/popup-closed-by-user' && code !== 'auth/cancelled-popup-request') {
-        notify('error', 'Could not sign in. Check the Firebase configuration.')
+        notify('error', 'Não foi possível entrar. Verifique a configuração do Firebase.')
       }
     }
   }
@@ -48,7 +49,7 @@ export function SyncControl() {
     const connecting = syncStatus === 'connecting'
     return (
       <IconButton
-        label={connecting ? 'Connecting to sync…' : 'Sign in to sync across devices'}
+        label={connecting ? 'Conectando à sincronização…' : 'Entrar para sincronizar entre dispositivos'}
         disabled={connecting}
         onClick={() => void handleSignIn()}
       >
@@ -68,8 +69,8 @@ export function SyncControl() {
     <div className="relative">
       <button
         type="button"
-        aria-label="Sync settings"
-        title="Sync settings"
+        aria-label="Configurações de sincronização"
+        title="Configurações de sincronização"
         onClick={() => setMenuOpen((open) => !open)}
         className="relative inline-flex size-8 items-center justify-center rounded-full transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
       >
@@ -118,7 +119,7 @@ export function SyncControl() {
               }}
               className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs text-slate-600 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
             >
-              <LogOut size={13} /> Sign out
+              <LogOut size={13} /> Sair
             </button>
           </div>
         </>

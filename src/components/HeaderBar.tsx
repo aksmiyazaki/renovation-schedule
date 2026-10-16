@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react'
-import { format } from 'date-fns'
 import { CalendarDays, Download, Hammer, Moon, PanelLeft, Printer, Sun, Trash2, Upload } from 'lucide-react'
+import { fmtWeekdayDate, plural } from '../lib/format'
 import { renovationEnd } from '../lib/scheduling'
 import { exportRenovationFile, importRenovationFile } from '../lib/storage'
 import { useStore } from '../state/store'
 import type { Renovation } from '../types'
+import { ShareControl } from './ShareControl'
 import { SyncControl } from './SyncControl'
 import { ConfirmDialog } from './ui/Modal'
 import { IconButton } from './ui/controls'
@@ -29,39 +30,37 @@ export function HeaderBar() {
   const [confirmClear, setConfirmClear] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const weeks = Math.max(1, Math.round(renovation.durationDays / 7))
-
   const stepCount = renovation.steps.length
   const professionalCount = renovation.professionals.length
   const summary = [
-    stepCount > 0 ? `${stepCount} ${stepCount === 1 ? 'step' : 'steps'}` : null,
+    stepCount > 0 ? plural(stepCount, 'etapa', 'etapas') : null,
     professionalCount > 0
-      ? `${professionalCount} ${professionalCount === 1 ? 'professional' : 'professionals'}`
+      ? plural(professionalCount, 'profissional', 'profissionais')
       : null,
   ]
     .filter(Boolean)
-    .join(' and ')
+    .join(' e ')
 
   const handleImportFile = async (file: File | undefined) => {
     if (!file) return
     try {
       setPendingImport(await importRenovationFile(file))
     } catch (error) {
-      notify('error', error instanceof Error ? error.message : 'Import failed.')
+      notify('error', error instanceof Error ? error.message : 'Falha ao importar.')
     }
   }
 
   return (
-    <header className="no-print flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-slate-200 bg-white px-3 py-2.5 dark:border-slate-800 dark:bg-slate-900">
+    <header className="no-print flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-slate-200 bg-white px-3 py-2.5 dark:border-slate-800 dark:bg-slate-900 sm:gap-x-5">
       <div className="flex min-w-0 items-center gap-2">
-        <IconButton label="Toggle sidebar" onClick={toggleSidebar}>
+        <IconButton label="Alternar painel lateral" onClick={toggleSidebar}>
           <PanelLeft size={16} />
         </IconButton>
         <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm">
           <Hammer size={15} />
         </div>
         <input
-          aria-label="Project name"
+          aria-label="Nome da reforma"
           value={renovation.name}
           onChange={(event) => setProjectName(event.target.value)}
           style={{ width: `${Math.min(36, Math.max(12, renovation.name.length + 1))}ch` }}
@@ -71,41 +70,41 @@ export function HeaderBar() {
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500 dark:text-slate-400">
         <label className="flex items-center gap-1.5">
-          <span className="font-medium">Start</span>
+          <span className="font-medium">Início</span>
           <input
             type="date"
             value={renovation.startDate}
-            title="All steps shift along with the project start date"
+            title="Todas as etapas se deslocam junto com a data de início da reforma"
             onChange={(event) => setStartDate(event.target.value)}
             className={dateInputClass}
           />
         </label>
         <label className="flex items-center gap-1.5">
-          <span className="font-medium">Duration</span>
+          <span className="font-medium">Duração</span>
           <input
             type="number"
             min={1}
-            max={104}
-            value={weeks}
+            max={728}
+            value={renovation.durationDays}
             onChange={(event) => {
               const next = parseInt(event.target.value, 10)
-              if (Number.isFinite(next) && next >= 1) setDurationDays(next * 7)
+              if (Number.isFinite(next) && next >= 1) setDurationDays(next)
             }}
             className={`w-16 text-center ${dateInputClass}`}
           />
-          <span>weeks</span>
+          <span>{renovation.durationDays === 1 ? 'dia' : 'dias'}</span>
         </label>
         <span className="flex items-center gap-1.5 whitespace-nowrap">
           <CalendarDays size={13} />
-          ends {format(renovationEnd(renovation), 'EEE d MMM yyyy')}
+          termina em {fmtWeekdayDate(renovationEnd(renovation))}
         </span>
       </div>
 
       <div className="ml-auto flex items-center gap-1">
-        <IconButton label="Export plan as JSON" onClick={() => exportRenovationFile(renovation)}>
+        <IconButton label="Exportar plano em JSON" onClick={() => exportRenovationFile(renovation)}>
           <Download size={16} />
         </IconButton>
-        <IconButton label="Import plan from JSON" onClick={() => fileInputRef.current?.click()}>
+        <IconButton label="Importar plano de um JSON" onClick={() => fileInputRef.current?.click()}>
           <Upload size={16} />
         </IconButton>
         <input
@@ -118,18 +117,19 @@ export function HeaderBar() {
             event.target.value = ''
           }}
         />
-        <IconButton label="Print schedule" onClick={() => setPrinting(true)}>
+        <IconButton label="Imprimir cronograma" onClick={() => setPrinting(true)}>
           <Printer size={16} />
         </IconButton>
         <SyncControl />
+        <ShareControl />
         <IconButton
-          label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          label={theme === 'dark' ? 'Mudar para o modo claro' : 'Mudar para o modo escuro'}
           onClick={toggleTheme}
         >
           {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
         </IconButton>
         <IconButton
-          label="Clear all"
+          label="Apagar tudo"
           tone="danger"
           disabled={stepCount === 0 && professionalCount === 0}
           onClick={() => setConfirmClear(true)}
@@ -140,31 +140,31 @@ export function HeaderBar() {
 
       <ConfirmDialog
         open={pendingImport !== null}
-        title="Import plan?"
+        title="Importar plano?"
         message={
           pendingImport
-            ? `Replace the current plan with “${pendingImport.name}” (${pendingImport.steps.length} steps, ${pendingImport.professionals.length} professionals)?`
+            ? `Substituir o plano atual por “${pendingImport.name}” (${plural(pendingImport.steps.length, 'etapa', 'etapas')}, ${plural(pendingImport.professionals.length, 'profissional', 'profissionais')})?`
             : ''
         }
-        confirmLabel="Import"
+        confirmLabel="Importar"
         onCancel={() => setPendingImport(null)}
         onConfirm={() => {
           if (pendingImport) {
             replaceRenovation(pendingImport)
-            notify('success', 'Plan imported.')
+            notify('success', 'Plano importado.')
           }
         }}
       />
 
       <ConfirmDialog
         open={confirmClear}
-        title="Clear everything?"
-        message={`This deletes ${summary} and resets the project to a blank 8-week plan. Export a backup first if you want to keep it — clearing cannot be undone.`}
-        confirmLabel="Clear all"
+        title="Apagar tudo?"
+        message={`Isso exclui ${summary} e redefine o projeto para um plano em branco de 56 dias. Exporte um backup antes se quiser mantê-lo — a exclusão não pode ser desfeita.`}
+        confirmLabel="Apagar tudo"
         onCancel={() => setConfirmClear(false)}
         onConfirm={() => {
           clearAll()
-          notify('info', 'Plan cleared.')
+          notify('info', 'Plano apagado.')
         }}
       />
     </header>

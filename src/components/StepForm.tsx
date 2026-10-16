@@ -22,6 +22,7 @@ const STATUSES: StepStatus[] = ['todo', 'in_progress', 'done']
 interface FormState {
   title: string
   professionalId: string | null
+  roomId: string | null
   startDate: string
   durationDays: number
   status: StepStatus
@@ -31,7 +32,7 @@ interface FormState {
 interface StepFormProps {
   open: boolean
   step: Step | null
-  defaults?: { startDate?: string; professionalId?: string | null }
+  defaults?: { startDate?: string; professionalId?: string | null; roomId?: string | null }
   onClose: () => void
 }
 
@@ -46,6 +47,7 @@ export function StepForm({ open, step, defaults, onClose }: StepFormProps) {
   const [form, setForm] = useState<FormState>({
     title: '',
     professionalId: null,
+    roomId: null,
     startDate: renovation.startDate,
     durationDays: 3,
     status: 'todo',
@@ -60,6 +62,7 @@ export function StepForm({ open, step, defaults, onClose }: StepFormProps) {
       setForm({
         title: step.title,
         professionalId: step.professionalId,
+        roomId: step.roomId,
         startDate: step.startDate,
         durationDays: step.durationDays,
         status: step.status,
@@ -71,6 +74,7 @@ export function StepForm({ open, step, defaults, onClose }: StepFormProps) {
     setForm({
       title: '',
       professionalId: defaults?.professionalId ?? null,
+      roomId: defaults?.roomId ?? current.rooms[0]?.id ?? null,
       startDate: defaults?.startDate ?? suggestNextStart(current.steps, current.startDate),
       durationDays: 3,
       status: 'todo',
@@ -84,21 +88,25 @@ export function StepForm({ open, step, defaults, onClose }: StepFormProps) {
   const outside =
     form.startDate < renovation.startDate || endISO > renovationEndISO(renovation)
   const canSubmit =
-    form.title.trim().length > 0 && form.durationDays >= 1 && /^\d{4}-\d{2}-\d{2}$/.test(form.startDate)
+    form.title.trim().length > 0 &&
+    form.durationDays >= 1 &&
+    /^\d{4}-\d{2}-\d{2}$/.test(form.startDate) &&
+    (renovation.rooms.length === 0 || form.roomId !== null)
 
   const extendToFit = () => {
     const candidate: Step = {
       id: '__draft',
-      title: form.title || 'Draft',
+      title: form.title || 'Rascunho',
       professionalId: form.professionalId,
+      roomId: form.roomId,
       startDate: form.startDate,
       durationDays: form.durationDays,
       status: form.status,
     }
     const steps = [...renovation.steps.filter((existing) => existing.id !== step?.id), candidate]
     const required = requiredDurationDays(steps, renovation.startDate)
-    setDurationDays(Math.ceil(required / 7) * 7)
-    notify('info', 'Renovation window extended.')
+    setDurationDays(required)
+    notify('info', 'Prazo da reforma estendido.')
   }
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -107,6 +115,7 @@ export function StepForm({ open, step, defaults, onClose }: StepFormProps) {
     const payload = {
       title: form.title.trim(),
       professionalId: form.professionalId,
+      roomId: form.roomId,
       startDate: form.startDate,
       durationDays: form.durationDays,
       status: form.status,
@@ -116,42 +125,65 @@ export function StepForm({ open, step, defaults, onClose }: StepFormProps) {
       updateStep(step.id, payload)
     } else {
       addStep(payload)
-      notify('success', 'Step added.')
+      notify('success', 'Etapa adicionada.')
     }
     onClose()
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={step ? 'Edit step' : 'New step'}>
+    <Modal open={open} onClose={onClose} title={step ? 'Editar etapa' : 'Nova etapa'}>
       <form onSubmit={submit} className="space-y-4">
-        <Field label="Title" htmlFor="step-title">
+        <Field label="Título" htmlFor="step-title">
           <Input
             id="step-title"
             autoFocus
             value={form.title}
             onChange={(event) => setForm({ ...form, title: event.target.value })}
-            placeholder="e.g. Tile the kitchen floor"
+            placeholder="ex.: Azulejar o piso da cozinha"
           />
         </Field>
 
-        <Field label="Professional" htmlFor="step-professional">
-          <Select
-            id="step-professional"
-            value={form.professionalId ?? ''}
-            onChange={(event) => setForm({ ...form, professionalId: event.target.value || null })}
-          >
-            <option value="">Unassigned</option>
-            {renovation.professionals.map((professional) => (
-              <option key={professional.id} value={professional.id}>
-                {professional.name}
-                {professional.trade ? ` — ${professional.trade}` : ''}
-              </option>
-            ))}
-          </Select>
-        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Cômodo" htmlFor="step-room">
+            <Select
+              id="step-room"
+              value={form.roomId ?? ''}
+              onChange={(event) => setForm({ ...form, roomId: event.target.value || null })}
+            >
+              {renovation.rooms.length === 0 ? (
+                <option value="">Nenhum cômodo cadastrado</option>
+              ) : null}
+              {renovation.rooms.length > 0 && form.roomId === null ? (
+                <option value="" disabled>
+                  Selecione um cômodo
+                </option>
+              ) : null}
+              {renovation.rooms.map((room) => (
+                <option key={room.id} value={room.id}>
+                  {room.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Profissional" htmlFor="step-professional">
+            <Select
+              id="step-professional"
+              value={form.professionalId ?? ''}
+              onChange={(event) => setForm({ ...form, professionalId: event.target.value || null })}
+            >
+              <option value="">Sem responsável</option>
+              {renovation.professionals.map((professional) => (
+                <option key={professional.id} value={professional.id}>
+                  {professional.name}
+                  {professional.trade ? ` — ${professional.trade}` : ''}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Start date" htmlFor="step-start">
+          <Field label="Data de início" htmlFor="step-start">
             <Input
               id="step-start"
               type="date"
@@ -159,7 +191,7 @@ export function StepForm({ open, step, defaults, onClose }: StepFormProps) {
               onChange={(event) => setForm({ ...form, startDate: event.target.value })}
             />
           </Field>
-          <Field label="Duration (days)" htmlFor="step-duration">
+          <Field label="Duração (dias)" htmlFor="step-duration">
             <Input
               id="step-duration"
               type="number"
@@ -183,7 +215,7 @@ export function StepForm({ open, step, defaults, onClose }: StepFormProps) {
                       : 'bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700',
                   )}
                 >
-                  {days === 7 ? '1w' : days === 14 ? '2w' : `${days}d`}
+                  {days}d
                 </button>
               ))}
             </div>
@@ -192,19 +224,20 @@ export function StepForm({ open, step, defaults, onClose }: StepFormProps) {
 
         <div className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
           <p>
-            Ends <span className="font-medium text-slate-700 dark:text-slate-200">{fmtDay(endISO)}</span>{' '}
+            Termina em{' '}
+            <span className="font-medium text-slate-700 dark:text-slate-200">{fmtDay(endISO)}</span>{' '}
             · {durationLabel(Math.max(1, form.durationDays))}
           </p>
           {outside ? (
             <p className="mt-1 flex flex-wrap items-center gap-1 text-rose-600 dark:text-rose-400">
               <TriangleAlert size={12} className="shrink-0" />
-              Outside the renovation window (ends {fmtDay(renovationEndISO(renovation))})
+              Fora do prazo da reforma (termina em {fmtDay(renovationEndISO(renovation))})
               <button
                 type="button"
                 onClick={extendToFit}
                 className="font-medium underline underline-offset-2 hover:no-underline"
               >
-                Extend renovation
+                Estender prazo
               </button>
             </p>
           ) : null}
@@ -230,28 +263,28 @@ export function StepForm({ open, step, defaults, onClose }: StepFormProps) {
           </div>
         </Field>
 
-        <Field label="Notes" htmlFor="step-notes">
+        <Field label="Notas" htmlFor="step-notes">
           <Textarea
             id="step-notes"
             rows={2}
             value={form.notes}
             onChange={(event) => setForm({ ...form, notes: event.target.value })}
-            placeholder="Optional details…"
+            placeholder="Detalhes opcionais…"
           />
         </Field>
 
         <div className="flex items-center justify-between pt-1">
           {step ? (
             <Button variant="danger-ghost" size="sm" onClick={() => setConfirmDelete(true)}>
-              <Trash2 size={14} /> Delete
+              <Trash2 size={14} /> Excluir
             </Button>
           ) : (
             <span />
           )}
           <div className="flex gap-2">
-            <Button onClick={onClose}>Cancel</Button>
+            <Button onClick={onClose}>Cancelar</Button>
             <Button type="submit" variant="primary" disabled={!canSubmit}>
-              {step ? 'Save changes' : 'Add step'}
+              {step ? 'Salvar alterações' : 'Adicionar etapa'}
             </Button>
           </div>
         </div>
@@ -259,13 +292,13 @@ export function StepForm({ open, step, defaults, onClose }: StepFormProps) {
 
       <ConfirmDialog
         open={confirmDelete}
-        title="Delete step?"
-        message={`“${step?.title ?? ''}” will be removed from the schedule.`}
+        title="Excluir etapa?"
+        message={`“${step?.title ?? ''}” será removida do cronograma.`}
         onCancel={() => setConfirmDelete(false)}
         onConfirm={() => {
           if (step) {
             removeStep(step.id)
-            notify('info', 'Step deleted.')
+            notify('info', 'Etapa excluída.')
           }
           onClose()
         }}

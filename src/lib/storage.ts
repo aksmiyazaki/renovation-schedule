@@ -1,4 +1,4 @@
-import type { Professional, Renovation, Step, StepStatus } from '../types'
+import type { Professional, Renovation, Room, Step, StepStatus } from '../types'
 import { PALETTE } from './palette'
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
@@ -15,7 +15,7 @@ function slugify(value: string): string {
     value
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '') || 'renovation'
+      .replace(/^-+|-+$/g, '') || 'reforma'
   )
 }
 
@@ -43,7 +43,7 @@ export async function importRenovationFile(file: File): Promise<Renovation> {
   try {
     parsed = JSON.parse(text)
   } catch {
-    throw new Error('That file is not valid JSON.')
+    throw new Error('Este arquivo não é um JSON válido.')
   }
   return sanitizeRenovation(parsed)
 }
@@ -55,22 +55,36 @@ export function sanitizeRenovation(input: unknown): Renovation {
     wrapper && typeof wrapper === 'object' && 'renovation' in wrapper ? wrapper.renovation : input
   ) as Record<string, unknown> | null
   if (!data || typeof data !== 'object') {
-    throw new Error('The file does not contain a renovation plan.')
+    throw new Error('O arquivo não contém um plano de reforma.')
   }
 
   const startDate = asString(data.startDate)
   if (!ISO_DATE.test(startDate)) {
-    throw new Error('The plan has no valid start date.')
+    throw new Error('O plano não tem uma data de início válida.')
   }
 
   const durationRaw = Number(data.durationDays)
   const durationDays = Number.isFinite(durationRaw) && durationRaw >= 1 ? Math.round(durationRaw) : 28
 
+  const rooms: Room[] = (Array.isArray(data.rooms) ? data.rooms : [])
+    .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === 'object')
+    .map((entry, index) => ({
+      id: asString(entry.id) || uid(),
+      name: asString(entry.name) || `Cômodo ${index + 1}`,
+    }))
+
+  // De-duplicate room ids so step references stay unambiguous.
+  const roomIds = new Set<string>()
+  for (const room of rooms) {
+    if (roomIds.has(room.id)) room.id = uid()
+    roomIds.add(room.id)
+  }
+
   const professionals: Professional[] = (Array.isArray(data.professionals) ? data.professionals : [])
     .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === 'object')
     .map((entry, index) => ({
       id: asString(entry.id) || uid(),
-      name: asString(entry.name) || `Professional ${index + 1}`,
+      name: asString(entry.name) || `Profissional ${index + 1}`,
       trade: asString(entry.trade),
       color: HEX_COLOR.test(asString(entry.color)) ? asString(entry.color) : PALETTE[index % PALETTE.length],
     }))
@@ -89,11 +103,13 @@ export function sanitizeRenovation(input: unknown): Renovation {
       const duration = Math.round(Number(entry.durationDays))
       const status = STATUSES.includes(entry.status as StepStatus) ? (entry.status as StepStatus) : 'todo'
       const professionalId = asString(entry.professionalId)
+      const roomId = asString(entry.roomId)
       const notes = asString(entry.notes)
       return {
         id: asString(entry.id) || uid(),
-        title: asString(entry.title) || `Step ${index + 1}`,
+        title: asString(entry.title) || `Etapa ${index + 1}`,
         professionalId: professionalIds.has(professionalId) ? professionalId : null,
+        roomId: roomIds.has(roomId) ? roomId : null,
         startDate: ISO_DATE.test(start) ? start : startDate,
         durationDays: Number.isFinite(duration) && duration >= 1 ? duration : 1,
         status,
@@ -108,9 +124,10 @@ export function sanitizeRenovation(input: unknown): Renovation {
   }
 
   return {
-    name: asString(data.name) || 'Imported renovation',
+    name: asString(data.name) || 'Reforma importada',
     startDate,
     durationDays,
+    rooms,
     professionals,
     steps,
   }
