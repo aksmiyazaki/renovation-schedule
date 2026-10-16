@@ -42,7 +42,7 @@ export function Modal({ open, onClose, title, children, wide = false }: ModalPro
           transition={{ duration: 0.15 }}
           onClick={onClose}
         >
-          <div className="flex min-h-full items-center justify-center p-4">
+          <div className="flex min-h-full items-end justify-center sm:items-center sm:p-4">
             <motion.div
               ref={panelRef}
               role="dialog"
@@ -54,8 +54,8 @@ export function Modal({ open, onClose, title, children, wide = false }: ModalPro
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ duration: 0.18, ease: 'easeOut' }}
               className={cx(
-                'relative w-full rounded-2xl border border-slate-200 bg-white shadow-xl outline-none dark:border-slate-700 dark:bg-slate-900',
-                wide ? 'max-w-2xl' : 'max-w-md',
+                'relative max-h-[85dvh] w-full overflow-y-auto rounded-t-2xl border border-slate-200 bg-white shadow-xl outline-none sm:max-h-none sm:overflow-visible sm:rounded-2xl dark:border-slate-700 dark:bg-slate-900',
+                wide ? 'sm:max-w-2xl' : 'sm:max-w-md',
               )}
             >
               <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5 dark:border-slate-800">

@@ -6,6 +6,7 @@ import { CalendarDays, TriangleAlert, ZoomIn, ZoomOut } from 'lucide-react'
 import { cx } from '../../lib/cx'
 import { fmtDay, plural } from '../../lib/format'
 import { holidayMap } from '../../lib/holidays'
+import { useIsMobile } from '../../lib/media'
 import { UNASSIGNED_COLOR } from '../../lib/palette'
 import {
   collectGeneralSteps,
@@ -118,13 +119,15 @@ function SegmentedToggle<T extends string>({
   options,
   value,
   onChange,
+  className,
 }: {
   options: Array<{ value: T; label: string; title: string }>
   value: T
   onChange: (value: T) => void
+  className?: string
 }) {
   return (
-    <div className="flex overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+    <div className={cx('flex overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700', className)}>
       {options.map((option) => (
         <button
           key={option.value}
@@ -132,7 +135,7 @@ function SegmentedToggle<T extends string>({
           title={option.title}
           onClick={() => onChange(option.value)}
           className={cx(
-            'px-2.5 py-1.5 text-xs font-medium transition-colors',
+            'flex-1 px-2.5 py-1.5 text-xs font-medium transition-colors',
             value === option.value
               ? 'bg-indigo-600 text-white'
               : 'bg-white text-slate-500 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800',
@@ -211,6 +214,7 @@ interface ResourceRowProps {
   lane: Lane
   group: CalendarGroup
   zebra: boolean
+  rowHeaderWidth: number
   start: Date
   totalDays: number
   dayWidth: number
@@ -233,6 +237,7 @@ function ResourceRow({
   lane,
   group,
   zebra,
+  rowHeaderWidth,
   start,
   totalDays,
   dayWidth,
@@ -276,7 +281,7 @@ function ResourceRow({
     <div className="relative flex border-t border-[var(--cal-line)]" style={{ height }}>
       <div
         className="cal-sticky sticky left-0 z-20 flex items-center gap-2 border-r border-[var(--cal-line)] bg-white py-1 pr-3 pl-2.5 dark:bg-slate-900"
-        style={{ width: ROW_HEADER_WIDTH, borderLeft: `4px solid ${lane.dotColor}` }}
+        style={{ width: rowHeaderWidth, borderLeft: `4px solid ${lane.dotColor}` }}
       >
         <span className="size-2.5 shrink-0 rounded-full" style={{ background: lane.dotColor }} />
         <div className="min-w-0">
@@ -345,6 +350,9 @@ export function TimelineCalendar() {
 
   const timelineRef = useRef<HTMLDivElement>(null)
   const monthsRef = useRef<HTMLDivElement>(null)
+
+  const isMobile = useIsMobile()
+  const rowHeaderWidth = isMobile ? 148 : ROW_HEADER_WIDTH
 
   const start = useMemo(() => fromISODate(renovation.startDate), [renovation.startDate])
   const totalDays = renovation.durationDays
@@ -486,8 +494,9 @@ export function TimelineCalendar() {
       ) : null}
 
       {!printing ? (
-        <div className="no-print flex flex-wrap items-center gap-2 pt-3 pb-3">
+        <div className="no-print flex flex-wrap items-center gap-2 py-2 sm:pt-3 sm:pb-3">
           <SegmentedToggle
+            className="flex-1 sm:flex-none"
             options={[
               { value: 'months', label: 'Calendário', title: 'Visão de calendário (meses)' },
               { value: 'timeline', label: 'Linha do tempo', title: 'Visão de linha do tempo' },
@@ -496,6 +505,7 @@ export function TimelineCalendar() {
             onChange={setCalendarView}
           />
           <SegmentedToggle
+            className="flex-1 sm:flex-none"
             options={[
               { value: 'rooms', label: 'Cômodos', title: 'Uma faixa por cômodo' },
               { value: 'team', label: 'Equipe', title: 'Uma faixa por profissional' },
@@ -503,7 +513,7 @@ export function TimelineCalendar() {
             value={calendarGroup}
             onChange={setCalendarGroup}
           />
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="order-last w-full text-xs text-slate-500 dark:text-slate-400 sm:order-none sm:w-auto">
             {plural(renovation.steps.length, 'etapa', 'etapas')} ·{' '}
             {plural(renovation.rooms.length, 'cômodo', 'cômodos')}
             {hiddenRoomCount > 0
@@ -573,12 +583,13 @@ export function TimelineCalendar() {
             ref={timelineRef}
             className="calendar-scroll thin-scrollbar min-h-0 flex-1 overflow-auto overscroll-contain"
           >
-            <div className="relative" style={{ width: ROW_HEADER_WIDTH + contentWidth }}>
+            <div className="relative" style={{ width: rowHeaderWidth + contentWidth }}>
               <TimeHeader
                 days={days}
                 dayWidth={dayWidth}
                 todayIndex={todayIndex}
                 holidays={holidays}
+                rowHeaderWidth={rowHeaderWidth}
               />
               <div className="relative">
                 <GridBackground days={days} dayWidth={dayWidth} holidayDates={holidayDates} />
@@ -588,6 +599,7 @@ export function TimelineCalendar() {
                     lane={lane}
                     group={calendarGroup}
                     zebra={index % 2 === 1}
+                    rowHeaderWidth={rowHeaderWidth}
                     start={start}
                     totalDays={totalDays}
                     dayWidth={dayWidth}

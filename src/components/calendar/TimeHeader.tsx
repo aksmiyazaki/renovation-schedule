@@ -4,7 +4,6 @@ import { Users } from 'lucide-react'
 import { cx } from '../../lib/cx'
 import { fmtMonthShort, fmtMonthYear, fmtWeekdayNarrow, fmtWeekdayShort } from '../../lib/format'
 import { toISODate } from '../../lib/scheduling'
-import { ROW_HEADER_WIDTH } from './constants'
 
 interface MonthGroup {
   key: string
@@ -18,9 +17,10 @@ interface TimeHeaderProps {
   dayWidth: number
   todayIndex: number | null
   holidays: Map<string, string>
+  rowHeaderWidth: number
 }
 
-export function TimeHeader({ days, dayWidth, todayIndex, holidays }: TimeHeaderProps) {
+export function TimeHeader({ days, dayWidth, todayIndex, holidays, rowHeaderWidth }: TimeHeaderProps) {
   const months = useMemo<MonthGroup[]>(() => {
     const groups: MonthGroup[] = []
     days.forEach((date, index) => {
@@ -40,7 +40,7 @@ export function TimeHeader({ days, dayWidth, todayIndex, holidays }: TimeHeaderP
       <div className="flex">
         <div
           className="cal-sticky sticky left-0 z-40 flex items-center gap-1.5 border-r border-[var(--cal-line)] bg-[var(--cal-header-bg)] px-3 text-[11px] font-semibold tracking-wider text-slate-400 uppercase dark:text-slate-500"
-          style={{ width: ROW_HEADER_WIDTH }}
+          style={{ width: rowHeaderWidth }}
         >
           <Users size={13} /> Equipe
         </div>
