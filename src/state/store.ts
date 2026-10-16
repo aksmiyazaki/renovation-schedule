@@ -72,7 +72,7 @@ interface StoreState {
   addStep: (data: Omit<Step, 'id'>) => void
   addStepCopies: (data: Omit<Step, 'id' | 'roomId' | 'groupId'>, roomIds: string[]) => void
   updateStep: (id: string, patch: Partial<Omit<Step, 'id'>>) => void
-  updateStepGroup: (groupId: string, patch: Partial<Omit<Step, 'id' | 'groupId'>>) => void
+  updateStepGroup: (groupId: string, patch: Partial<Omit<Step, 'id' | 'groupId' | 'roomId'>>) => void
   removeStep: (id: string) => void
   removeStepGroup: (groupId: string) => void
   setStepStatus: (id: string, status: StepStatus) => void

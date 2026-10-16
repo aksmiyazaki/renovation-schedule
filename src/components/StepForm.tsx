@@ -146,7 +146,8 @@ export function StepForm({ open, step, defaults, onClose }: StepFormProps) {
           : `Etapa adicionada em ${plural(renovation.rooms.length, 'cômodo', 'cômodos')}.`,
       )
     } else if (step?.groupId) {
-      updateStepGroup(step.groupId, { ...base, roomId: form.roomId })
+      // O cômodo de cada cópia é individual — a edição em grupo nunca mexe nele.
+      updateStepGroup(step.groupId, base)
       notify('info', 'Etapa atualizada em todos os cômodos.')
     } else if (step) {
       updateStep(step.id, { ...base, roomId: form.roomId })
