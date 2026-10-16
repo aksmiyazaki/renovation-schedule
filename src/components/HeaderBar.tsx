@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react'
 import { format } from 'date-fns'
-import { CalendarDays, Download, Hammer, Moon, PanelLeft, Printer, Sun, Upload } from 'lucide-react'
+import { CalendarDays, Download, Hammer, Moon, PanelLeft, Printer, Sun, Trash2, Upload } from 'lucide-react'
 import { renovationEnd } from '../lib/scheduling'
 import { exportRenovationFile, importRenovationFile } from '../lib/storage'
 import { useStore } from '../state/store'
 import type { Renovation } from '../types'
+import { SyncControl } from './SyncControl'
 import { ConfirmDialog } from './ui/Modal'
 import { IconButton } from './ui/controls'
 
@@ -21,12 +22,25 @@ export function HeaderBar() {
   const toggleSidebar = useStore((state) => state.toggleSidebar)
   const setPrinting = useStore((state) => state.setPrinting)
   const replaceRenovation = useStore((state) => state.replaceRenovation)
+  const clearAll = useStore((state) => state.clearAll)
   const notify = useStore((state) => state.notify)
 
   const [pendingImport, setPendingImport] = useState<Renovation | null>(null)
+  const [confirmClear, setConfirmClear] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const weeks = Math.max(1, Math.round(renovation.durationDays / 7))
+
+  const stepCount = renovation.steps.length
+  const professionalCount = renovation.professionals.length
+  const summary = [
+    stepCount > 0 ? `${stepCount} ${stepCount === 1 ? 'step' : 'steps'}` : null,
+    professionalCount > 0
+      ? `${professionalCount} ${professionalCount === 1 ? 'professional' : 'professionals'}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(' and ')
 
   const handleImportFile = async (file: File | undefined) => {
     if (!file) return
@@ -107,11 +121,20 @@ export function HeaderBar() {
         <IconButton label="Print schedule" onClick={() => setPrinting(true)}>
           <Printer size={16} />
         </IconButton>
+        <SyncControl />
         <IconButton
           label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
           onClick={toggleTheme}
         >
           {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+        </IconButton>
+        <IconButton
+          label="Clear all"
+          tone="danger"
+          disabled={stepCount === 0 && professionalCount === 0}
+          onClick={() => setConfirmClear(true)}
+        >
+          <Trash2 size={16} />
         </IconButton>
       </div>
 
@@ -130,6 +153,18 @@ export function HeaderBar() {
             replaceRenovation(pendingImport)
             notify('success', 'Plan imported.')
           }
+        }}
+      />
+
+      <ConfirmDialog
+        open={confirmClear}
+        title="Clear everything?"
+        message={`This deletes ${summary} and resets the project to a blank 8-week plan. Export a backup first if you want to keep it — clearing cannot be undone.`}
+        confirmLabel="Clear all"
+        onCancel={() => setConfirmClear(false)}
+        onConfirm={() => {
+          clearAll()
+          notify('info', 'Plan cleared.')
         }}
       />
     </header>

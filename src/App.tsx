@@ -5,6 +5,7 @@ import { HeaderBar } from './components/HeaderBar'
 import { Notice } from './components/Notice'
 import { Sidebar } from './components/Sidebar'
 import { TimelineCalendar } from './components/calendar/TimelineCalendar'
+import { useCloudSync } from './lib/sync'
 import { renovationEnd } from './lib/scheduling'
 import { useStore } from './state/store'
 
@@ -13,6 +14,8 @@ export default function App() {
   const theme = useStore((state) => state.theme)
   const printing = useStore((state) => state.printing)
   const setPrinting = useStore((state) => state.setPrinting)
+
+  useCloudSync()
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')

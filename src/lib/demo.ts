@@ -2,6 +2,18 @@ import { addDays, startOfWeek } from 'date-fns'
 import type { Renovation } from '../types'
 import { toISODate } from './scheduling'
 
+/** Blank plan used by “Clear all”: this week's Monday, 8 weeks, nothing in it. */
+export function createEmptyRenovation(): Renovation {
+  const monday = startOfWeek(new Date(), { weekStartsOn: 1 })
+  return {
+    name: 'My renovation',
+    startDate: toISODate(monday),
+    durationDays: 56,
+    professionals: [],
+    steps: [],
+  }
+}
+
 /** Demo plan shown on the very first visit, starting on this week's Monday. */
 export function createDemoRenovation(): Renovation {
   const monday = startOfWeek(new Date(), { weekStartsOn: 1 })

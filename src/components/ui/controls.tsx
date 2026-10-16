@@ -49,16 +49,26 @@ export function Button({
 
 interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   label: string
+  tone?: 'default' | 'danger'
 }
 
-export function IconButton({ label, className, type = 'button', ...rest }: IconButtonProps) {
+export function IconButton({
+  label,
+  tone = 'default',
+  className,
+  type = 'button',
+  ...rest
+}: IconButtonProps) {
   return (
     <button
       type={type}
       aria-label={label}
       title={label}
       className={cx(
-        'inline-flex size-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:cursor-not-allowed disabled:opacity-40 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200',
+        'inline-flex size-8 items-center justify-center rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:cursor-not-allowed disabled:opacity-40',
+        tone === 'danger'
+          ? 'text-slate-500 hover:bg-rose-50 hover:text-rose-600 dark:text-slate-400 dark:hover:bg-rose-500/10 dark:hover:text-rose-400'
+          : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200',
         className,
       )}
       {...rest}

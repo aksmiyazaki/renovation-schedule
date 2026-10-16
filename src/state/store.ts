@@ -1,12 +1,20 @@
 import { addDays, differenceInCalendarDays, parseISO } from 'date-fns'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { createDemoRenovation } from '../lib/demo'
+import { createDemoRenovation, createEmptyRenovation } from '../lib/demo'
 import { PALETTE } from '../lib/palette'
 import { toISODate } from '../lib/scheduling'
 import type { Professional, Renovation, Step, StepStatus, ZoomLevel } from '../types'
 
 export type Theme = 'light' | 'dark'
+
+export type SyncStatus = 'unavailable' | 'signed-out' | 'connecting' | 'syncing' | 'synced' | 'error'
+
+export interface SyncUserInfo {
+  email: string
+  displayName: string
+  photoURL: string | null
+}
 
 export interface Notice {
   id: number
@@ -22,6 +30,13 @@ interface StoreState {
   printing: boolean
   notice: Notice | null
 
+  syncStatus: SyncStatus
+  syncUser: SyncUserInfo | null
+  /** Timestamp of the cloud revision this app knows about (0 = never synced). */
+  syncUpdatedAt: number
+  /** Timestamp of the last local edit (0 = untouched since load). */
+  localUpdatedAt: number
+
   setProjectName: (name: string) => void
   setStartDate: (iso: string) => void
   setDurationDays: (days: number) => void
@@ -36,12 +51,19 @@ interface StoreState {
   setStepStatus: (id: string, status: StepStatus) => void
 
   replaceRenovation: (renovation: Renovation) => void
+  clearAll: () => void
 
   setTheme: (theme: Theme) => void
   toggleTheme: () => void
   setZoom: (zoom: ZoomLevel) => void
   toggleSidebar: () => void
   setPrinting: (printing: boolean) => void
+
+  setSyncStatus: (status: SyncStatus) => void
+  setSyncUser: (user: SyncUserInfo | null) => void
+  setSyncUpdatedAt: (updatedAt: number) => void
+  setLocalUpdatedAt: (updatedAt: number) => void
+  applyRemoteRenovation: (renovation: Renovation, updatedAt: number) => void
 
   notify: (tone: Notice['tone'], message: string) => void
   clearNotice: () => void
@@ -64,6 +86,11 @@ export const useStore = create<StoreState>()(
       sidebarOpen: true,
       printing: false,
       notice: null,
+
+      syncStatus: 'unavailable',
+      syncUser: null,
+      syncUpdatedAt: 0,
+      localUpdatedAt: 0,
 
       setProjectName: (name) =>
         set((state) => ({ renovation: { ...state.renovation, name } })),
@@ -170,6 +197,7 @@ export const useStore = create<StoreState>()(
         })),
 
       replaceRenovation: (renovation) => set({ renovation }),
+      clearAll: () => set({ renovation: createEmptyRenovation() }),
 
       setTheme: (theme) => set({ theme }),
       toggleTheme: () =>
@@ -177,6 +205,13 @@ export const useStore = create<StoreState>()(
       setZoom: (zoom) => set({ zoom }),
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
       setPrinting: (printing) => set({ printing }),
+
+      setSyncStatus: (syncStatus) => set({ syncStatus }),
+      setSyncUser: (syncUser) => set({ syncUser }),
+      setSyncUpdatedAt: (syncUpdatedAt) => set({ syncUpdatedAt }),
+      setLocalUpdatedAt: (localUpdatedAt) => set({ localUpdatedAt }),
+      applyRemoteRenovation: (renovation, updatedAt) =>
+        set({ renovation, syncUpdatedAt: updatedAt, localUpdatedAt: updatedAt }),
 
       notify: (tone, message) => set({ notice: { id: (noticeCounter += 1), tone, message } }),
       clearNotice: () => set({ notice: null }),
@@ -189,6 +224,8 @@ export const useStore = create<StoreState>()(
         theme: state.theme,
         zoom: state.zoom,
         sidebarOpen: state.sidebarOpen,
+        syncUpdatedAt: state.syncUpdatedAt,
+        localUpdatedAt: state.localUpdatedAt,
       }),
     },
   ),
