@@ -87,39 +87,28 @@
   body,
   #root {
     height: auto !important;
-  }
-
-  .app-shell {
-    display: block !important;
-    height: auto !important;
-  }
-
-  .app-main {
-    display: block !important;
-  }
-
-  .calendar-panel {
-    border: 0 !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-  }
-
-  .calendar-scroll {
-    height: auto !important;
-    max-height: none !important;
-    overflow: visible !important;
-  }
-
-  .cal-sticky {
-    position: static !important;
-  }
-
-  .cal-badge {
-    display: none !important;
+    background: #fff !important;
   }
 
   * {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  /* Dedicated print output (PrintView): one page per section/room. */
+  .print-page {
+    break-after: page;
+  }
+
+  .print-page:last-child {
+    break-after: auto;
+  }
+
+  .print-month {
+    break-inside: avoid;
+  }
+
+  .print-table tr {
+    break-inside: avoid;
   }
 }

@@ -15,6 +15,8 @@ export const fmtWeekdayDateISO = (iso: string): string =>
 
 export const fmtDate = (date: Date): string => clean(format(date, 'd MMM yyyy', { locale: ptBR }))
 
+export const fmtNumeric = (iso: string): string => format(parseISO(iso), 'dd/MM/yyyy')
+
 export const fmtWeekdayDate = (date: Date): string =>
   clean(format(date, 'EEE, d MMM yyyy', { locale: ptBR }))
 

@@ -1,23 +1,12 @@
 import { useMemo } from 'react'
 import type { MouseEvent as ReactMouseEvent, RefObject } from 'react'
-import {
-  addDays,
-  differenceInCalendarDays,
-  eachDayOfInterval,
-  eachMonthOfInterval,
-  eachWeekOfInterval,
-  endOfMonth,
-  endOfWeek,
-  format,
-  isWeekend,
-  startOfMonth,
-  startOfWeek,
-} from 'date-fns'
+import { addDays, eachMonthOfInterval, format, isWeekend } from 'date-fns'
 import { Check, DoorOpen, Home } from 'lucide-react'
+import { WEEKDAY_LABELS, buildWeekSegments, monthWeeks } from '../../lib/calendarGrid'
 import { cx } from '../../lib/cx'
 import { durationLabel, fmtDay, fmtMonthYear, plural } from '../../lib/format'
 import { contrastText } from '../../lib/palette'
-import { fromISODate, stepEndISO, toISODate } from '../../lib/scheduling'
+import { fromISODate, toISODate } from '../../lib/scheduling'
 import type { CalendarGroup, Step } from '../../types'
 import { GENERAL_LANE_ID, UNASSIGNED_LANE_ID } from './constants'
 import type { Lane } from './constants'
@@ -27,61 +16,6 @@ const CELL_W = 46
 const SEGMENT_HEIGHT = 22
 const SEGMENT_GAP = 3
 const DAY_NUMBER_HEIGHT = 20
-const WEEKDAY_LABELS = ['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom']
-
-interface WeekSegment {
-  step: Step
-  startIdx: number
-  endIdx: number
-  continuesLeft: boolean
-  continuesRight: boolean
-  sub: number
-  subrows: number
-}
-
-/** Intersects the lane steps with one week and stacks them into sub-rows. */
-function buildWeekSegments(steps: Step[], week: Date[]): WeekSegment[] {
-  const weekStartISO = toISODate(week[0])
-  const weekEndISO = toISODate(week[6])
-
-  const items = steps
-    .filter((step) => step.startDate <= weekEndISO && stepEndISO(step) >= weekStartISO)
-    .map((step) => {
-      const endISO = stepEndISO(step)
-      const clippedStart = step.startDate < weekStartISO ? weekStartISO : step.startDate
-      const clippedEnd = endISO > weekEndISO ? weekEndISO : endISO
-      return {
-        step,
-        startIdx: differenceInCalendarDays(fromISODate(clippedStart), week[0]),
-        endIdx: differenceInCalendarDays(fromISODate(clippedEnd), week[0]),
-        continuesLeft: step.startDate < weekStartISO,
-        continuesRight: endISO > weekEndISO,
-      }
-    })
-    .sort((a, b) => a.startIdx - b.startIdx || a.endIdx - b.endIdx)
-
-  const sublaneEnds: number[] = []
-  const placed = items.map((item) => {
-    let sub = sublaneEnds.findIndex((end) => end < item.startIdx)
-    if (sub === -1) {
-      sublaneEnds.push(item.endIdx)
-      sub = sublaneEnds.length - 1
-    } else {
-      sublaneEnds[sub] = item.endIdx
-    }
-    return { ...item, sub }
-  })
-  const subrows = Math.max(1, sublaneEnds.length)
-  return placed.map((placement) => ({ ...placement, subrows }))
-}
-
-function monthWeeks(month: Date): Date[][] {
-  const gridStart = startOfWeek(startOfMonth(month), { weekStartsOn: 1 })
-  const gridEnd = endOfWeek(endOfMonth(month), { weekStartsOn: 1 })
-  return eachWeekOfInterval({ start: gridStart, end: gridEnd }, { weekStartsOn: 1 }).map(
-    (weekStart) => eachDayOfInterval({ start: weekStart, end: addDays(weekStart, 6) }),
-  )
-}
 
 interface SegmentProps {
   step: Step
